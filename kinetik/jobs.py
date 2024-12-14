@@ -58,6 +58,7 @@ class Job(StateModel):
                 )
 
     def execute(self):
+        print(self.machine.state)
         try:
             self.machine.start()
             print(f"[Job: {self.name}] Starting execution...")

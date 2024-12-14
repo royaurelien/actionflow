@@ -14,6 +14,6 @@ class ExampleAction(Action):
 if __name__ == "__main__":
     print(Action.list())
 
-    example = ExampleAction(kind="test")
-    print(example.machine.start())
-    print(example.machine.state)
+    example = ExampleAction(kind="test", _id="123")
+    print(example.start())
+    print(example.state)

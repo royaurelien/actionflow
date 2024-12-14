@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 from pydantic import BaseModel
 
@@ -8,11 +8,10 @@ from kinetik.logger import _logger
 from kinetik.tools import update
 
 
-class BaseAction(ABC):
-    name: str
-    context: BaseModel = None
-
+class BaseAction:
     _subclasses: dict = {}
+    context: BaseModel = None
+    name: str
 
     @classmethod
     def list(cls):
@@ -51,7 +50,7 @@ class BaseAction(ABC):
             BaseAction._subclasses[cls.name] = cls
 
 
-class Action(BaseAction, StateModel):
+class Action(StateModel, BaseAction, kw_only=True):
     _id: str
     name: str = None
     description: str

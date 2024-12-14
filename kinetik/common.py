@@ -3,8 +3,27 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+import msgspec
+
+# from msgspec.structs import force_setattr
+# from pydantic import BaseModel, ConfigDict, Field
 from transitions import Machine
+
+# from transitions.core import _LOGGER
+
+
+# class NewMachine(Machine):
+#     def _checked_assignment(self, model, name, func):
+#         bound_func = getattr(model, name, None)
+#         if (bound_func is None) ^ self.model_override:
+#             # setattr(model, name, func)
+#             force_setattr(model, name, func)
+#         else:
+#             _LOGGER.warning(
+#                 "%sSkip binding of '%s' to model due to model override policy.",
+#                 self.name,
+#                 name,
+#             )
 
 
 class SharedResources:
@@ -41,52 +60,39 @@ class SharedResources:
 #         self.machine.add_transition("fail", "running", "failure")
 
 
-class StateModel(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    state: str = Field(default="pending", exclude=True)
+class StateModel(
+    msgspec.Struct, kw_only=True, forbid_unknown_fields=False, frozen=False
+):
+    # model_config = ConfigDict(arbitrary_types_allowed=True)
+    # state: str = Field(default="pending", exclude=True)
     # states: List[str] = ["pending", "running", "success", "failure"]
-    machine: Machine = Field(default=None, exclude=True)
+    machine: Machine = Machine(
+        states=["pending", "running", "success", "failure"],
+        initial="pending",
+        transitions=[
+            {"trigger": "start", "source": "pending", "dest": "running"},
+            {"trigger": "complete", "source": "running", "dest": "success"},
+            {"trigger": "fail", "source": "running", "dest": "failure"},
+        ],
+        # ignore_invalid_triggers=True,
+    )
     create_ts: datetime = datetime.now()
     update_ts: Optional[datetime] = None
-
-    trigger: str = Field(default=None, exclude=True)
-    may_trigger: bool = Field(default=False, exclude=True)
-    to_pending: bool = Field(default=False, exclude=True)
-    may_to_pending: bool = Field(default=False, exclude=True)
-    to_running: bool = Field(default=False, exclude=True)
-    may_to_running: bool = Field(default=False, exclude=True)
-    to_success: bool = Field(default=False, exclude=True)
-    may_to_success: bool = Field(default=False, exclude=True)
-    to_failure: bool = Field(default=False, exclude=True)
-    may_to_failure: bool = Field(default=False, exclude=True)
-
-    is_pending: bool = Field(default=False, exclude=True)
-    is_running: bool = Field(default=False, exclude=True)
-    is_success: bool = Field(default=False, exclude=True)
-    is_failure: bool = Field(default=False, exclude=True)
-
-    start: bool = Field(default=False, exclude=True)
-    may_start: bool = Field(default=False, exclude=True)
-    complete: bool = Field(default=False, exclude=True)
-    may_complete: bool = Field(default=False, exclude=True)
-    fail: bool = Field(default=False, exclude=True)
-    may_fail: bool = Field(default=False, exclude=True)
 
     # @property
     # def state(self):
     #     return self.machine.state
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.machine = Machine(
-            model=self,
-            states=["pending", "running", "success", "failure"],
-            initial="pending",
-            # ignore_invalid_triggers=True,
-        )
-        self.machine.add_transition("start", "pending", "running")
-        self.machine.add_transition("complete", "running", "success")
-        self.machine.add_transition("fail", "running", "failure")
+    # def __post_init__(self):
+    #     self.machine = Machine(
+    #         model=self,
+    #         states=["pending", "running", "success", "failure"],
+    #         initial="pending",
+    #         # ignore_invalid_triggers=True,
+    #     )
+    #     self.machine.add_transition("start", "pending", "running")
+    #     self.machine.add_transition("complete", "running", "success")
+    #     self.machine.add_transition("fail", "running", "failure")
 
     @abstractmethod
     def execute(self):
