@@ -7,10 +7,8 @@ import msgspec
 
 # from msgspec.structs import force_setattr
 # from pydantic import BaseModel, ConfigDict, Field
-from transitions import Machine
-
 # from transitions.core import _LOGGER
-
+from transitions import Machine
 
 # class NewMachine(Machine):
 #     def _checked_assignment(self, model, name, func):
@@ -60,24 +58,57 @@ class SharedResources:
 #         self.machine.add_transition("fail", "running", "failure")
 
 
-class StateModel(
-    msgspec.Struct, kw_only=True, forbid_unknown_fields=False, frozen=False
-):
+class StateModel(msgspec.Struct, kw_only=True, dict=True, forbid_unknown_fields=True):
     # model_config = ConfigDict(arbitrary_types_allowed=True)
     # state: str = Field(default="pending", exclude=True)
     # states: List[str] = ["pending", "running", "success", "failure"]
-    machine: Machine = Machine(
-        states=["pending", "running", "success", "failure"],
-        initial="pending",
-        transitions=[
-            {"trigger": "start", "source": "pending", "dest": "running"},
-            {"trigger": "complete", "source": "running", "dest": "success"},
-            {"trigger": "fail", "source": "running", "dest": "failure"},
-        ],
-        # ignore_invalid_triggers=True,
-    )
+    # machine: Machine = Machine(
+    #     states=["pending", "running", "success", "failure"],
+    #     initial="pending",
+    #     transitions=[
+    #         {"trigger": "start", "source": "pending", "dest": "running"},
+    #         {"trigger": "complete", "source": "running", "dest": "success"},
+    #         {"trigger": "fail", "source": "running", "dest": "failure"},
+    #     ],
+    #     # ignore_invalid_triggers=True,
+    # )
     create_ts: datetime = datetime.now()
     update_ts: Optional[datetime] = None
+    machine: Machine = None  # Machine is initialized dynamically
+
+    # def __setattr__(self, name: str, value: Any):
+    #     """Allow dynamic attribute setting."""
+    #     super().__setattr__(name, value)
+    #     # try:
+    #     #     super().__setattr__(name, value)
+    #     # except AttributeError:
+    #     #     # If the attribute doesn't exist in the defined fields, store it dynamically
+    #     #     # msgspec.structs.force_setattr(self, name, value)
+    #     #     object.__setattr__(self, name, value)
+
+    # def __getattr__(self, name: str):
+    #     """Provide dynamic attribute access for machine methods."""
+    #     # Use `object.__getattribute__` to avoid recursion
+    #     try:
+    #         return object.__getattribute__(self, name)
+    #     except AttributeError:
+    #         raise AttributeError(
+    #             f"'{type(self).__name__}' object has no attribute '{name}'"
+    #         )
+
+    def __post_init__(self):
+        self._initialize_machine()
+
+    def _initialize_machine(self):
+        """Initialize the state machine."""
+        self.machine = Machine(
+            model=self,
+            states=["pending", "running", "success", "failure"],
+            initial="pending",
+        )
+        self.machine.add_transition("start", "pending", "running")
+        self.machine.add_transition("complete", "running", "success")
+        self.machine.add_transition("fail", "running", "failure")
 
     # @property
     # def state(self):

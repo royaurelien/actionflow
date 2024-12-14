@@ -1,6 +1,8 @@
 # from dataclasses import dataclass
+import json
 from typing import List
 
+import msgspec
 import yaml
 from pydantic import BaseModel
 
@@ -18,20 +20,20 @@ class FlowSchema(BaseModel):
 
 
 # @dataclass(frozen=False)
-class Flow(StateModel):
+class Flow(StateModel, forbid_unknown_fields=True):
     jobs: List[Job]
 
     def execute(self):
         try:
-            self.machine.start()
+            self.start()
             print("[Flow] Starting execution...")
             for job in self.jobs:
                 job.execute()
-                if job.machine.state != "success":
+                if job.state != "success":
                     raise Exception(f"Job {job.name} failed.")
-            self.machine.complete()
+            self.complete()
         except Exception as e:
-            self.machine.fail()
+            self.fail()
             print(f"[Flow] Failed with error: {e}")
 
     @classmethod
@@ -51,8 +53,13 @@ class Flow(StateModel):
 
         jobs = []
         for job_data in data.get("jobs", []):
+            # actions = [
+            #     Action(**action_data) for action_data in job_data.get("actions", [])
+            # ]
+
             actions = [
-                Action(**action_data) for action_data in job_data.get("actions", [])
+                msgspec.json.decode(json.dumps(action_data), type=Action)
+                for action_data in job_data.get("actions", [])
             ]
             job = Job(name=job_data["name"], steps=actions)
             jobs.append(job)
@@ -68,19 +75,21 @@ if __name__ == "__main__":
     data = """
 jobs:
   - name: job1
+    truc: xxx
     steps:
       - name: example
         wait: true
-  #     - name: example
-  #       wait: false
-  #     - name: example
-  #       wait: true
-  # - name: job2
-  #   steps:
-  #     - name: example
-  #       wait: false
-  #     - name: example
-  #       wait: true
+        autre: false
+      - name: example
+        wait: false
+      - name: example
+        wait: true
+  - name: job2
+    steps:
+      - name: example
+        wait: false
+      - name: example
+        wait: true
 """
     from kinetik import load_all_actions
 

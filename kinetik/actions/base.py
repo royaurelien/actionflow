@@ -91,8 +91,8 @@ class Action(StateModel, BaseAction, kw_only=True):
     def execute(self):
         """Unified execution pipeline."""
         try:
-            self.machine.start()
-            self.machine.complete() if self.run() else self.machine.fail()
+            self.start()
+            self.complete() if self.run() else self.fail()
         except Exception:
-            self.machine.fail()
+            self.fail()
             # raise

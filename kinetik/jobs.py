@@ -13,19 +13,19 @@ class Group(StateModel):
 
     def execute(self):
         try:
-            self.machine.start()
+            self.start()
             print("[Group] Executing actions in parallel...")
             with ThreadPoolExecutor() as executor:
                 futures = [executor.submit(action.execute) for action in self.actions]
                 for future in futures:
                     future.result()  # Wait for all actions to complete
-            self.machine.complete()
+            self.complete()
         except Exception as e:
-            self.machine.fail()
+            self.fail()
             print(f"[Group] Failed with error: {e}")
 
 
-class Job(StateModel):
+class Job(StateModel, forbid_unknown_fields=True):
     name: str
     steps: List[Action]
 
@@ -58,9 +58,9 @@ class Job(StateModel):
                 )
 
     def execute(self):
-        print(self.machine.state)
+        print(self.state)
         try:
-            self.machine.start()
+            self.start()
             print(f"[Job: {self.name}] Starting execution...")
 
             for actions in self.grouped:
@@ -68,7 +68,7 @@ class Job(StateModel):
                 group.execute()
                 if group.state != "success":
                     raise Exception("Group execution failed.")
-            self.machine.complete()
+            self.complete()
         except Exception as e:
-            self.machine.fail()
+            self.fail()
             print(f"[Job: {self.name}] Failed with error: {e}")
