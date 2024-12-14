@@ -1,33 +1,17 @@
-import threading
 from abc import ABC, abstractmethod
-from datetime import datetime
-from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
+from kinetik.common import SharedResources, StateModel
 from kinetik.exceptions import ActionNotFound
 from kinetik.logger import _logger
 from kinetik.tools import update
 
 
-# Shared resource pool using a threading lock to ensure thread-safety
-class SharedResources:
-    def __init__(self):
-        self.lock = threading.Lock()
-        self.resources: dict = {}
-
-    def get_resource(self, resource_name: str):
-        with self.lock:
-            return self.resources.get(resource_name)
-
-    def set_resource(self, resource_name: str, value: Any):
-        with self.lock:
-            self.resources[resource_name] = value
-
-
 class BaseAction(ABC):
     name: str
     context: BaseModel = None
+
     _subclasses: dict = {}
 
     @classmethod
@@ -39,6 +23,7 @@ class BaseAction(ABC):
     def by_name(cls, name, **kwargs):
         """Get subclass by name"""
         try:
+            print(f"by_name: {kwargs}")
             return cls._subclasses[name](**kwargs)
         except KeyError:
             raise ActionNotFound(f"'{name}' not found")
@@ -66,8 +51,7 @@ class BaseAction(ABC):
             BaseAction._subclasses[cls.name] = cls
 
 
-class Action(BaseAction, BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+class Action(BaseAction, StateModel):
     _id: str
     name: str = None
     description: str
@@ -75,10 +59,8 @@ class Action(BaseAction, BaseModel):
     retry: int = 1
     skip: bool = False
     continue_on_error: bool = False
-    state: str = "pending"
-    create_ts: datetime = datetime.now()
-    update_ts: Optional[datetime] = None
-    shared_resources: SharedResources = SharedResources()  # Shared resource pool
+
+    shared_resources: SharedResources = SharedResources()
 
     @update("update_ts")
     def run(self, ctx: BaseModel = None) -> bool:
@@ -106,3 +88,12 @@ class Action(BaseAction, BaseModel):
             raise
 
         return False
+
+    def execute(self):
+        """Unified execution pipeline."""
+        try:
+            self.machine.start()
+            self.machine.complete() if self.run() else self.machine.fail()
+        except Exception:
+            self.machine.fail()
+            # raise

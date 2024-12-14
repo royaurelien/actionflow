@@ -1,14 +1,46 @@
-from typing import Dict, List
+from concurrent.futures import ThreadPoolExecutor
+from typing import List
 
-from pydantic import BaseModel
+from pydantic import model_validator
 
 from kinetik.actions.base import Action
+from kinetik.common import StateModel
 from kinetik.tools import group_by
 
 
-class JobSchema(BaseModel):
+class Group(StateModel):
+    actions: List[Action]
+
+    def execute(self):
+        try:
+            self.machine.start()
+            print("[Group] Executing actions in parallel...")
+            with ThreadPoolExecutor() as executor:
+                futures = [executor.submit(action.execute) for action in self.actions]
+                for future in futures:
+                    future.result()  # Wait for all actions to complete
+            self.machine.complete()
+        except Exception as e:
+            self.machine.fail()
+            print(f"[Group] Failed with error: {e}")
+
+
+class Job(StateModel):
     name: str
     steps: List[Action]
+
+    @model_validator(mode="before")
+    def preprocess_data(cls, values):
+        steps = []
+
+        for step in values["steps"]:
+            print(step)
+            name = step.pop("name")
+            action = Action.by_name(name, **step)
+            steps.append(action)
+
+        values["steps"] = steps
+        return values
 
     @property
     def length(self) -> int:
@@ -25,25 +57,17 @@ class JobSchema(BaseModel):
                     f"{index}_{self.name}_{group_index}_{action_index}_{action.name}"
                 )
 
+    def execute(self):
+        try:
+            self.machine.start()
+            print(f"[Job: {self.name}] Starting execution...")
 
-class JobsSchema(BaseModel):
-    jobs: List[JobSchema]
-    _jobs: Dict[str, JobSchema]
-
-    @property
-    def length(self) -> int:
-        return sum(
-            map(
-                lambda item: item.length,
-                self.jobs,
-            )
-        )
-
-    def model_post_init(self, __context):
-        self._jobs = {job.name: job for job in self.jobs}
-        for index, job in enumerate(self.jobs, start=1):
-            job.set_indexes(index)
-        return super().model_post_init(__context)
-
-    def by_name(self, name: str) -> JobSchema:
-        return self._jobs.get(name)
+            for actions in self.grouped:
+                group = Group(actions=actions)
+                group.execute()
+                if group.state != "success":
+                    raise Exception("Group execution failed.")
+            self.machine.complete()
+        except Exception as e:
+            self.machine.fail()
+            print(f"[Job: {self.name}] Failed with error: {e}")
