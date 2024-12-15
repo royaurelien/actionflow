@@ -5,6 +5,7 @@ from pydantic import model_validator
 
 from kinetik.actions.base import Action
 from kinetik.common import StateModel
+from kinetik.logger import _logger
 from kinetik.tools import group_by
 
 
@@ -20,6 +21,7 @@ class Group(StateModel):
                 for future in futures:
                     future.result()  # Wait for all actions to complete
             self.machine.complete()
+            _logger.info("[Group] All actions completed successfully.")
         except Exception as e:
             self.machine.fail()
             print(f"[Group] Failed with error: {e}")
@@ -31,10 +33,12 @@ class Job(StateModel):
 
     @model_validator(mode="before")
     def preprocess_data(cls, values):
+        """
+        Replace steps with action instances created from the registry
+        """
         steps = []
 
         for step in values["steps"]:
-            print(step)
             name = step.pop("name")
             action = Action.by_name(name, **step)
             steps.append(action)
@@ -65,9 +69,10 @@ class Job(StateModel):
             for actions in self.grouped:
                 group = Group(actions=actions)
                 group.execute()
-                if group.state != "success":
+                if group.machine.state != "success":
                     raise Exception("Group execution failed.")
             self.machine.complete()
+            print(f"[Job: {self.name}] Completed successfully.")
         except Exception as e:
             self.machine.fail()
             print(f"[Job: {self.name}] Failed with error: {e}")

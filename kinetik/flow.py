@@ -18,15 +18,15 @@ class Flow(StateModel):
 
     def execute(self):
         try:
-            self.start()
+            self.machine.start()
             print("[Flow] Starting execution...")
             for job in self.jobs:
                 job.execute()
-                if job.state != "success":
+                if job.machine.state != "success":
                     raise Exception(f"Job {job.name} failed.")
-            self.complete()
+            self.machine.complete()
         except Exception as e:
-            self.fail()
+            self.machine.fail()
             print(f"[Flow] Failed with error: {e}")
 
     @classmethod
@@ -40,8 +40,6 @@ class Flow(StateModel):
     def from_string(cls, raw: str) -> "Flow":
         config = yaml.safe_load(raw)
 
-        print(config)
-
         return cls.model_validate(config)
 
 
@@ -52,16 +50,16 @@ jobs:
     steps:
       - name: example
         wait: true
-  #     - name: example
-  #       wait: false
-  #     - name: example
-  #       wait: true
-  # - name: job2
-  #   steps:
-  #     - name: example
-  #       wait: false
-  #     - name: example
-  #       wait: true
+      - name: example
+        wait: false
+      - name: example
+        wait: true
+  - name: job2
+    steps:
+      - name: example
+        wait: false
+      - name: example
+        wait: true
 """
     from kinetik import load_all_actions
 

@@ -23,7 +23,6 @@ class BaseAction(ABC):
     def by_name(cls, name, **kwargs):
         """Get subclass by name"""
         try:
-            print(f"by_name: {kwargs}")
             return cls._subclasses[name](**kwargs)
         except KeyError:
             raise ActionNotFound(f"'{name}' not found")
@@ -94,6 +93,7 @@ class Action(BaseAction, StateModel):
         try:
             self.machine.start()
             self.machine.complete() if self.run() else self.machine.fail()
-        except Exception:
+        except Exception as error:
+            _logger.error(f"Error executing action {self.name}: {error}")
             self.machine.fail()
             # raise

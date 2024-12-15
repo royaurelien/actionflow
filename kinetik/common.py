@@ -49,37 +49,9 @@ class StateModel(BaseModel):
     create_ts: datetime = datetime.now()
     update_ts: Optional[datetime] = None
 
-    trigger: str = Field(default=None, exclude=True)
-    may_trigger: bool = Field(default=False, exclude=True)
-    to_pending: bool = Field(default=False, exclude=True)
-    may_to_pending: bool = Field(default=False, exclude=True)
-    to_running: bool = Field(default=False, exclude=True)
-    may_to_running: bool = Field(default=False, exclude=True)
-    to_success: bool = Field(default=False, exclude=True)
-    may_to_success: bool = Field(default=False, exclude=True)
-    to_failure: bool = Field(default=False, exclude=True)
-    may_to_failure: bool = Field(default=False, exclude=True)
-
-    is_pending: bool = Field(default=False, exclude=True)
-    is_running: bool = Field(default=False, exclude=True)
-    is_success: bool = Field(default=False, exclude=True)
-    is_failure: bool = Field(default=False, exclude=True)
-
-    start: bool = Field(default=False, exclude=True)
-    may_start: bool = Field(default=False, exclude=True)
-    complete: bool = Field(default=False, exclude=True)
-    may_complete: bool = Field(default=False, exclude=True)
-    fail: bool = Field(default=False, exclude=True)
-    may_fail: bool = Field(default=False, exclude=True)
-
-    # @property
-    # def state(self):
-    #     return self.machine.state
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.machine = Machine(
-            model=self,
             states=["pending", "running", "success", "failure"],
             initial="pending",
             # ignore_invalid_triggers=True,
