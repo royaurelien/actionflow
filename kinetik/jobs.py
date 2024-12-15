@@ -5,6 +5,7 @@ from pydantic import model_validator
 
 from kinetik.actions.base import Action
 from kinetik.common import StateModel
+from kinetik.exceptions import ActionNotFound
 from kinetik.logger import _logger
 from kinetik.tools import group_by
 
@@ -40,7 +41,11 @@ class Job(StateModel):
 
         for step in values["steps"]:
             name = step.pop("name")
-            action = Action.by_name(name, **step)
+            try:
+                action = Action.by_name(name, **step)
+            except ActionNotFound:
+                _logger.error(f"Action not found: {name}")
+                exit(1)
             steps.append(action)
 
         values["steps"] = steps

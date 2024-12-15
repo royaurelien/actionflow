@@ -16,6 +16,7 @@ class SharedResources:
     def __init__(self):
         self.lock = threading.Lock()
         self.resources: dict = {}
+        # print(id(self))
 
     def get_resource(self, resource_name: str):
         with self.lock:
@@ -26,25 +27,9 @@ class SharedResources:
             self.resources[resource_name] = value
 
 
-# class StateMachine:
-#     states: List[str] = ["pending", "running", "success", "failure"]
-
-#     def __init__(self):
-#         self.machine = Machine(
-#             model=self,
-#             states=StateMachine.states,
-#             initial="pending",
-#             # ignore_invalid_triggers=True,
-#         )
-#         self.machine.add_transition("start", "pending", "running")
-#         self.machine.add_transition("complete", "running", "success")
-#         self.machine.add_transition("fail", "running", "failure")
-
-
 class StateModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     state: str = Field(default="pending", exclude=True)
-    # states: List[str] = ["pending", "running", "success", "failure"]
     machine: Machine = Field(default=None, exclude=True)
     create_ts: datetime = datetime.now()
     update_ts: Optional[datetime] = None
@@ -54,7 +39,6 @@ class StateModel(BaseModel):
         self.machine = Machine(
             states=["pending", "running", "success", "failure"],
             initial="pending",
-            # ignore_invalid_triggers=True,
         )
         self.machine.add_transition("start", "pending", "running")
         self.machine.add_transition("complete", "running", "success")

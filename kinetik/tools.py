@@ -5,7 +5,7 @@ from typing import Any, List
 
 import yaml
 
-from kinetik.settings import settings
+from kinetik.settings import Environment
 
 
 class SingletonMeta(type):
@@ -86,9 +86,8 @@ def update(fieldnames: str):
 def load_yaml_with_context(raw: str, context: dict = {}) -> dict:
     # Substitute environment and context variables using string.Template
     template = Template(raw)
+    env = Environment()
 
-    substituted_yaml = template.safe_substitute(
-        {**context, **settings.env.model_dump()}
-    )
+    substituted_yaml = template.safe_substitute({**context, **env.model_dump()})
     # Parse the substituted YAML
     return yaml.safe_load(substituted_yaml)

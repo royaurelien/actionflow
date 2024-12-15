@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel
 
 from kinetik.common import SharedResources, StateModel
+from kinetik.core import Context
 from kinetik.exceptions import ActionNotFound
 from kinetik.logger import _logger
 from kinetik.tools import update
@@ -10,8 +11,7 @@ from kinetik.tools import update
 
 class BaseAction(ABC):
     name: str
-    context: BaseModel = None
-
+    _context: Context = Context()
     _subclasses: dict = {}
 
     @classmethod
@@ -62,7 +62,7 @@ class Action(BaseAction, StateModel):
     shared_resources: SharedResources = SharedResources()
 
     @update("update_ts")
-    def run(self, ctx: BaseModel = None) -> bool:
+    def run(self) -> bool:
         """Run the action with retry logic"""
         try:
             while self.retry > 0:

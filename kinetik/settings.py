@@ -10,7 +10,7 @@ def get_default_workdir():
     return str(Path.home() / ".upgrades")
 
 
-class EnvSchema(BaseSettings):
+class Environment(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     workdir: str = os.getenv("KINETIK_WORKDIR", default=get_default_workdir())
     logfile: str = "main.log"
 
-    env: EnvSchema = EnvSchema()
+    env: Environment = Environment()
 
     @property
     def config_dir(self):

@@ -1,123 +1,60 @@
-import sys
 import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
-from typing import Generator
-
-import yaml
-
-from kinetik.actions.base import Action
-from kinetik.exceptions import ActionNotFound
-from kinetik.flow import FlowSchema
-from kinetik.jobs import JobSchema, JobsSchema
-from kinetik.logger import _logger
-from kinetik.tools import SingletonMeta, load_yaml_with_context
+from typing import Any, Dict
 
 
-@dataclass(frozen=False)
-class Client(metaclass=SingletonMeta):
-    context: FlowSchema
-    jobs: JobsSchema
+class Context:
+    """A thread-safe singleton class to hold shared context."""
 
-    def __post_init__(self):
-        self.stop_event = threading.Event()
+    _instance = None
+    _lock = threading.Lock()  # Lock object for thread-safe access
 
-    def next_job(self) -> Generator[JobSchema, None, None]:
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            with cls._lock:  # Ensure only one thread can execute this block
+                if cls._instance is None:
+                    cls._instance = super(Context, cls).__new__(cls)
+                    cls._instance.data = {}
+        return cls._instance
+
+    def initialize(self, initial_data: Dict[str, Any]):
         """
-        Get the next job to run.
+        Initialize the context with data.
+        Can only be called the first time.
         """
-        for job in self.jobs.jobs:
-            yield job.name, job
+        with self._lock:
+            if not self.data:  # Only initialize if no data exists
+                self.data.update(initial_data)
+            else:
+                raise ValueError("Context has already been initialized.")
 
-    def _run_action_in_thread(self, action):
-        """
-        Run an action in a separate thread and return the result.
-        """
-        if self.stop_event.is_set():
-            _logger.warning(f"Action {action.name} aborted due to stop signal.")
-            return False
+    def __getattr__(self, name: str) -> Any:
+        """Get an attribute from the context data."""
+        if name in self.data:
+            return self.data[name]
+        raise AttributeError(f"'Context' object has no attribute '{name}'")
 
-        try:
-            _logger.info(f"Executing action: {action.name}")
-            action.set_context(self.context)
-            result = action.run(ctx=self.context)
-            return result
-        except Exception as e:
-            _logger.error(f"Action {action.name} failed: {e}")
-            self.stop_event.set()  # Signal all threads to stop
-            raise
+    def __setattr__(self, name: str, value: Any):
+        """Set an attribute in the context data."""
+        if name == "data" or name.startswith("_"):  # For internal attributes
+            super().__setattr__(name, value)
+        else:
+            self.data[name] = value
 
-    def run_in_threads(self, job: JobSchema) -> Generator[tuple, None, None]:
-        """
-        Execute each group of actions sequentially, actions within a group concurrently.
-        """
+    def __delattr__(self, name: str):
+        """Delete an attribute from the context data."""
+        if name in self.data:
+            del self.data[name]
+        else:
+            raise AttributeError(f"'Context' object has no attribute '{name}'")
 
-        # job = self.jobs.by_name(job_name)
+    def set(self, key: str, value: Any):
+        """Set a key-value pair in the context."""
+        self.data[key] = value
 
-        with ThreadPoolExecutor() as executor:
-            # Iterate over groups of actions
-            for group_index, group in enumerate(job.grouped):
-                _logger.info(
-                    f"Running group {group_index + 1}/{len(job.grouped)}: {", ".join(list(map(lambda x: x.name, group)))}"
-                )
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get a value from the context."""
+        return self.data.get(key, default)
 
-                # Start each action in the group concurrently
-                futures = {
-                    executor.submit(self._run_action_in_thread, action): action
-                    for action in group
-                }
-
-                # Wait for all futures (threads) to complete and gather results
-                for future in as_completed(futures):
-                    action = futures[future]
-                    try:
-                        result = future.result()  # Capture result from the thread
-                        _logger.info(
-                            f"Action {action._id} finished with result: {result}"
-                        )
-                        yield (action._id, result)
-
-                    except Exception as e:
-                        _logger.error(f"Error executing action {action._id}: {e}")
-                        return (action.name, False)
-
-    @staticmethod
-    def load_actions(raw: str, context: dict = {}) -> Generator[dict, None, None]:
-        """
-        Load actions from a YAML file with environment and context.
-        """
-
-        def _load_actions(vals: dict) -> JobSchema:
-            actions = []
-            for item in vals["steps"]:
-                params = item.get("with", {})
-                try:
-                    action = Action.by_name(item["name"], **params)
-                    actions.append(action)
-                except ActionNotFound as error:
-                    _logger.error("Error loading action: %s", error)
-                    sys.exit(1)
-            return JobSchema(name=vals["name"], steps=actions)
-
-        data = load_yaml_with_context(raw, context)
-        for vals in data["upgrade"]["jobs"]:
-            yield _load_actions(vals)
-
-    @classmethod
-    def from_file(cls, filepath: str) -> "Client":
-        """
-        Load an upgrade file and return an Upgrade instance.
-        """
-
-        with open(filepath, "r", encoding="utf-8") as f:
-            raw_data = f.read()
-            raw_yaml = yaml.safe_load(raw_data)
-            context = FlowSchema(
-                **{k: v for k, v in raw_yaml["upgrade"].items() if k != "jobs"}
-            )
-
-            jobs = []
-            for job in cls.load_actions(raw_data, context.env):
-                jobs.append(job)
-
-        return cls(context=context, jobs=JobsSchema(jobs=jobs))
+    def clear(self):
+        """Clear all data in the context."""
+        self.data.clear()
