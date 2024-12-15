@@ -1,9 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor
-from typing import List
+from typing import Generator, List, Tuple
 
 from pydantic import model_validator
 
-from kinetik.actions.base import Action
+from kinetik.action import Action
 from kinetik.common import StateModel
 from kinetik.exceptions import ActionNotFound
 from kinetik.logger import _logger
@@ -12,6 +12,10 @@ from kinetik.tools import group_by
 
 class Group(StateModel):
     actions: List[Action]
+
+    def next_action(self) -> Generator[Tuple[int, Action], None, None]:
+        for index, action in enumerate(self.actions, start=1):
+            yield index, action
 
     def execute(self):
         try:
@@ -76,17 +80,22 @@ class Job(StateModel):
                     f"{index}_{self.name}_{group_index}_{action_index}_{action.name}"
                 )
 
+    def next_group(self) -> Generator[Tuple[int, Group], None, None]:
+        for index, actions in enumerate(self.grouped, start=1):
+            group = Group(actions=actions)
+            yield index, group
+
     def execute(self):
         try:
             self.machine.start()
             _logger.info(f"[Job: {self.name}] Starting execution...")
 
             total = len(self.grouped)
-            for index, actions in enumerate(self.grouped, start=1):
+            for index, group in self.next_group():
                 _logger.info(
                     f"[Group {index}/{total}] Executing actions in parallel..."
                 )
-                group = Group(actions=actions)
+
                 group.execute()
                 if group.machine.state != "success":
                     self.machine.fail()

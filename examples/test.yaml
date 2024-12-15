@@ -1,0 +1,27 @@
+name: example
+context:
+  workspace: /tmp
+  mode: test
+env:
+  key1: value1
+  key2: value2
+jobs:
+  job1:
+    steps:
+      - name: example
+        with:
+          wait: false
+      - name: fail
+        with:
+          wait: false
+      - name: example
+        with:
+          wait: true
+  job2:
+    steps:
+      - name: example
+        with:
+          wait: true
+      - name: example
+        with:
+          wait: true

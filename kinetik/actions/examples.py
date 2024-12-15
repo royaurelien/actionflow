@@ -1,4 +1,6 @@
-from kinetik.actions.base import Action
+import time
+
+from kinetik.action import Action
 
 
 class ExampleAction(Action):
@@ -7,6 +9,7 @@ class ExampleAction(Action):
     kind: str = None
 
     def _run(self) -> bool:
+        time.sleep(5)
         return True
 
 

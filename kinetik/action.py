@@ -3,10 +3,11 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel
 
 from kinetik.common import SharedResources, StateModel
-from kinetik.core import Context
+from kinetik.context import Context
 from kinetik.exceptions import ActionNotFound
-from kinetik.logger import _logger
-from kinetik.tools import update
+from kinetik.logger import _logger, log_execution
+
+# from kinetik.tools import update
 
 
 class BaseAction(ABC):
@@ -52,6 +53,7 @@ class BaseAction(ABC):
 
 class Action(BaseAction, StateModel):
     _id: str
+    _exec_time: float
     name: str = None
     description: str
     wait: bool = True
@@ -61,7 +63,8 @@ class Action(BaseAction, StateModel):
 
     shared_resources: SharedResources = SharedResources()
 
-    @update("update_ts")
+    # @update("update_ts")
+    @log_execution("_exec_time")
     def run(self) -> bool:
         """Run the action with retry logic"""
         try:
@@ -81,6 +84,7 @@ class Action(BaseAction, StateModel):
                     _logger.warning(
                         f"[Action: {self.name}] Error occurred, continuing despite failure."
                     )
+                    self._post_process()
                     return True
                 self.retry -= 1
                 _logger.info(
@@ -100,4 +104,11 @@ class Action(BaseAction, StateModel):
         except Exception as error:
             _logger.error(f"Error executing action {self.name}: {error}")
             self.machine.fail()
-            # raise
+
+    def summary(self):
+        """Summary of the action"""
+        return {
+            "name": self.name,
+            "state": self.machine.state,
+            "exec": self._exec_time,
+        }

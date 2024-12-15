@@ -70,6 +70,29 @@ def logs(function):
     return wrapper
 
 
+def log_execution(fieldnames: str):
+    def decorator_repeat(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            start = time.perf_counter()
+            output = func(*args, **kwargs)
+            end = time.perf_counter()
+
+            self = args[0]
+
+            obj = self
+            attrs = fieldnames.split(".")
+            for attr in attrs[:-1]:
+                obj = getattr(obj, attr)
+            setattr(obj, attrs[-1], end - start)
+
+            return output
+
+        return wrapper
+
+    return decorator_repeat
+
+
 class LogFileHandler(FileSystemEventHandler):
     """
     Custom handler to process file modifications.
