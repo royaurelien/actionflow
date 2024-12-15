@@ -5,12 +5,12 @@ from typing import Generator, List, Tuple
 
 import yaml
 
-from kinetik.action import Action
-from kinetik.common import StateModel
-from kinetik.context import Context
-from kinetik.jobs import Job
-from kinetik.logger import _logger
-from kinetik.tools import load_yaml_with_context
+from actionflow.action import Action
+from actionflow.common import StateModel
+from actionflow.context import Context
+from actionflow.jobs import Job
+from actionflow.logger import _logger
+from actionflow.tools import load_yaml_with_context
 
 
 class Flow(StateModel):
@@ -186,7 +186,7 @@ jobs:
         with:
           wait: true
 """
-    from kinetik import load_all_actions
+    from actionflow import load_all_actions
 
     load_all_actions()
     print(Action.list())

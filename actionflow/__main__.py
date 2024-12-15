@@ -1,4 +1,4 @@
-from kinetik.cli import main
+from actionflow.cli import main
 
 if __name__ == "__main__":
     main()

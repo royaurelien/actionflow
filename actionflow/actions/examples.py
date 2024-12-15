@@ -1,6 +1,6 @@
 import time
 
-from kinetik.action import Action
+from actionflow.action import Action
 
 
 class ExampleAction(Action):

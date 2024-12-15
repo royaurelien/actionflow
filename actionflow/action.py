@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 
 from pydantic import BaseModel
 
-from kinetik.common import SharedResources, StateModel
-from kinetik.context import Context
-from kinetik.exceptions import ActionNotFound
-from kinetik.logger import _logger, log_execution
+from actionflow.common import SharedResources, StateModel
+from actionflow.context import Context
+from actionflow.exceptions import ActionNotFound
+from actionflow.logger import _logger, log_execution
 
 # from kinetik.tools import update
 

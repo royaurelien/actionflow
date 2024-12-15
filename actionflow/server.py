@@ -3,7 +3,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from kinetik.core import Flow
+from actionflow.core import Flow
 
 logs = []
 

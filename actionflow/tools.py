@@ -5,7 +5,7 @@ from typing import Any, List
 
 import yaml
 
-from kinetik.settings import Environment
+from actionflow.settings import Environment
 
 
 class SingletonMeta(type):

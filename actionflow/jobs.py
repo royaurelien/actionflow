@@ -3,11 +3,11 @@ from typing import Generator, List, Tuple
 
 from pydantic import model_validator
 
-from kinetik.action import Action
-from kinetik.common import StateModel
-from kinetik.exceptions import ActionNotFound
-from kinetik.logger import _logger
-from kinetik.tools import group_by
+from actionflow.action import Action
+from actionflow.common import StateModel
+from actionflow.exceptions import ActionNotFound
+from actionflow.logger import _logger
+from actionflow.tools import group_by
 
 
 class Group(StateModel):

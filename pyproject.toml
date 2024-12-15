@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "kinetik"
+name = "actionflow"
 version = "0.1.0"
 description = ""
 authors = ["Aurelien Roy <roy.aurelien@gmail.com>"]
@@ -19,4 +19,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-actionflow = "kinetik.cli:main"
+actionflow = "actionflow.cli:main"

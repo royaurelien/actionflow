@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from kinetik.settings import settings
+from actionflow.settings import settings
 
 __all__ = ["logger", "_logger", "logs"]
 

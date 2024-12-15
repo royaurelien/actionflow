@@ -4,7 +4,7 @@ import os
 import sys
 from multiprocessing import Lock
 
-from kinetik.core import Flow
+from actionflow.core import Flow
 
 LOCK_FILE = "/tmp/my_program.lock"
 
