@@ -7,6 +7,7 @@ from kinetik.actions.base import Action
 from kinetik.common import StateModel
 from kinetik.core import Context
 from kinetik.jobs import Job
+from kinetik.logger import _logger
 from kinetik.tools import load_yaml_with_context
 
 
@@ -20,6 +21,7 @@ class Flow(StateModel):
     jobs: List[Job]
     env: dict = {}
     context: dict = {}
+    workspace: str
 
     def execute(self):
         """
@@ -39,17 +41,23 @@ class Flow(StateModel):
         Raises:
             Exception: If any job fails during execution.
         """
+        total = len(self.jobs)
         try:
+            _logger.info(f"[Flow] Starting execution... ({total} jobs)")
             self.machine.start()
-            print("[Flow] Starting execution...")
-            for job in self.jobs:
+
+            for index, job in enumerate(self.jobs, start=1):
                 job.execute()
                 if job.machine.state != "success":
-                    raise Exception(f"Job {job.name} failed.")
-            self.machine.complete()
-        except Exception as e:
+                    _logger.error(f"Job {index}/{total} {job.name} failed.")
+                    return
+
+        except Exception as error:
+            _logger.error(f"[Flow] Failed with error: {error}")
             self.machine.fail()
-            print(f"[Flow] Failed with error: {e}")
+            return
+
+        self.machine.complete()
 
     @staticmethod
     def load(raw: str) -> dict:
@@ -139,10 +147,10 @@ jobs:
     steps:
       - name: example
         with:
-          wait: true
-      - name: example
+          wait: false
+      - name: fail
         with:
-          wait: true
+          wait: false
       - name: example
         with:
           wait: true

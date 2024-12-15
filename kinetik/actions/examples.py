@@ -7,8 +7,16 @@ class ExampleAction(Action):
     kind: str = None
 
     def _run(self) -> bool:
-        print(f"[{self.name}] Running action")
         return True
+
+
+class FailAction(Action):
+    name: str = "fail"
+    description: str = "An example action"
+    retry: int = 3
+
+    def _run(self) -> bool:
+        return not bool(self.retry - 1)
 
 
 if __name__ == "__main__":

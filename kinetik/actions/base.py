@@ -68,30 +68,34 @@ class Action(BaseAction, StateModel):
             while self.retry > 0:
                 # Check if the action should be skipped
                 if self.skip and self._check():
-                    _logger.info(f"{self.name} already satisfied, skipping.")
+                    _logger.info(f"[Action: {self.name}] already satisfied, skipping.")
                     return True
 
                 self._pre_process()
 
                 if self._run():  # If the action succeeds, stop retrying
-                    _logger.info(f"{self.name} completed successfully.")
+                    _logger.info(f"[Action: {self.name}] completed successfully.")
                     self._post_process()
                     return self._check()
                 if self.continue_on_error:
-                    _logger.warning("Error occurred, continuing despite failure.")
+                    _logger.warning(
+                        f"[Action: {self.name}] Error occurred, continuing despite failure."
+                    )
                     return True
                 self.retry -= 1
-                _logger.info(f"Retrying {self.name}, attempts left: {self.retry}")
+                _logger.info(
+                    f"[Action: {self.name}] Retrying, attempts left: {self.retry}"
+                )
         except Exception as error:
-            _logger.error(f"Error running action {self.name}: {error}")
+            _logger.error(f"[Action: {self.name}] Error: {error}")
             raise
 
         return False
 
     def execute(self):
         """Unified execution pipeline."""
+        self.machine.start()
         try:
-            self.machine.start()
             self.machine.complete() if self.run() else self.machine.fail()
         except Exception as error:
             _logger.error(f"Error executing action {self.name}: {error}")

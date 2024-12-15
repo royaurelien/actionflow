@@ -15,17 +15,26 @@ class Group(StateModel):
 
     def execute(self):
         try:
+            # _logger.info("[Group] Executing actions in parallel...")
             self.machine.start()
-            print("[Group] Executing actions in parallel...")
+
             with ThreadPoolExecutor() as executor:
                 futures = [executor.submit(action.execute) for action in self.actions]
                 for future in futures:
-                    future.result()  # Wait for all actions to complete
-            self.machine.complete()
-            _logger.info("[Group] All actions completed successfully.")
+                    # Wait for all actions to complete
+                    future.result()
+
+            if not all(action.machine.state == "success" for action in self.actions):
+                self.machine.fail()
+                return
+
         except Exception as e:
             self.machine.fail()
-            print(f"[Group] Failed with error: {e}")
+            _logger.info(f"[Group] Failed with error: {e}")
+            return
+
+        # _logger.info("[Group] All actions completed successfully.")
+        self.machine.complete()
 
 
 class Job(StateModel):
@@ -41,8 +50,9 @@ class Job(StateModel):
 
         for step in values["steps"]:
             name = step.pop("name")
+            params = step.pop("with", {})
             try:
-                action = Action.by_name(name, **step)
+                action = Action.by_name(name, **params)
             except ActionNotFound:
                 _logger.error(f"Action not found: {name}")
                 exit(1)
@@ -69,15 +79,29 @@ class Job(StateModel):
     def execute(self):
         try:
             self.machine.start()
-            print(f"[Job: {self.name}] Starting execution...")
+            _logger.info(f"[Job: {self.name}] Starting execution...")
 
-            for actions in self.grouped:
+            total = len(self.grouped)
+            for index, actions in enumerate(self.grouped, start=1):
+                _logger.info(
+                    f"[Group {index}/{total}] Executing actions in parallel..."
+                )
                 group = Group(actions=actions)
                 group.execute()
                 if group.machine.state != "success":
-                    raise Exception("Group execution failed.")
-            self.machine.complete()
-            print(f"[Job: {self.name}] Completed successfully.")
+                    self.machine.fail()
+                    # raise Exception("Group execution failed.")
+                    return
+
+                _logger.info(
+                    f"[Group {index}/{total}] All actions completed successfully."
+                )
+
+            _logger.info(f"[Job: {self.name}] Completed successfully.")
+
         except Exception as e:
+            _logger.info(f"[Job: {self.name}] Failed with error: {e}")
             self.machine.fail()
-            print(f"[Job: {self.name}] Failed with error: {e}")
+            return
+
+        self.machine.complete()
