@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 from pydantic import BaseModel
 
@@ -8,7 +8,7 @@ from kinetik.logger import _logger
 from kinetik.tools import update
 
 
-class BaseAction:
+class BaseAction(ABC):
     _subclasses: dict = {}
     context: BaseModel = None
     name: str
@@ -50,7 +50,7 @@ class BaseAction:
             BaseAction._subclasses[cls.name] = cls
 
 
-class Action(StateModel, BaseAction, kw_only=True):
+class Action(BaseAction, StateModel, kw_only=True):
     _id: str
     name: str = None
     description: str
@@ -60,6 +60,16 @@ class Action(StateModel, BaseAction, kw_only=True):
     continue_on_error: bool = False
 
     shared_resources: SharedResources = SharedResources()
+
+    # def __init__(self, **kwargs):
+    #     StateModel.__init__(kw_only=True, **kwargs)
+    #     BaseAction.__init__()
+
+    def __repr__(self):
+        return f"{self.name}"
+
+    def __str__(self):
+        return f"{self.name}"
 
     @update("update_ts")
     def run(self, ctx: BaseModel = None) -> bool:
@@ -84,15 +94,17 @@ class Action(StateModel, BaseAction, kw_only=True):
                 _logger.info(f"Retrying {self.name}, attempts left: {self.retry}")
         except Exception as error:
             _logger.error(f"Error running action {self.name}: {error}")
-            raise
+            raise error
 
         return False
 
     def execute(self):
         """Unified execution pipeline."""
+        _logger.info(f"Executing action: {self._id}")
         try:
-            self.start()
-            self.complete() if self.run() else self.fail()
-        except Exception:
-            self.fail()
-            # raise
+            self.machine.start()
+            self.machine.complete() if self.run() else self.machine.fail()
+        except Exception as error:
+            self.machine.fail()
+            _logger.error(f"Error executing action {self._id}: {error}")
+            raise error

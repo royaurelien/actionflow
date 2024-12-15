@@ -16,7 +16,7 @@ __all__ = ["logger", "_logger", "logs"]
 class LogConfig(BaseModel):
     """Logging configuration to be set for the server"""
 
-    LOGGER_NAME: str = "upgradekit"
+    LOGGER_NAME: str = "kinetik"
     LOG_FORMAT: str = "%(asctime)s | %(levelprefix)s | %(message)s"
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "DEBUG")
 
@@ -49,7 +49,7 @@ class LogConfig(BaseModel):
 
 dictConfig(LogConfig().model_dump())
 
-_logger = logger = logging.getLogger("upgradekit")
+_logger = logger = logging.getLogger("kinetik")
 
 
 def logs(function):

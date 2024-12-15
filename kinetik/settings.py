@@ -7,7 +7,7 @@ __all__ = ["settings"]
 
 
 def get_default_workdir():
-    return str(Path.home() / ".upgrades")
+    return str(Path.home() / ".kinetik")
 
 
 class EnvSchema(BaseSettings):

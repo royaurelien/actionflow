@@ -1,14 +1,14 @@
 # from dataclasses import dataclass
-import json
 from typing import List
 
-import msgspec
 import yaml
 from pydantic import BaseModel
 
 from kinetik.actions.base import Action
 from kinetik.common import StateModel
 from kinetik.jobs import Job
+from kinetik.logger import _logger
+from kinetik.settings import settings
 
 
 class FlowSchema(BaseModel):
@@ -16,25 +16,27 @@ class FlowSchema(BaseModel):
     env: dict = {}
 
 
-# StateModel
-
-
-# @dataclass(frozen=False)
-class Flow(StateModel, forbid_unknown_fields=True):
+class Flow(StateModel):
     jobs: List[Job]
 
     def execute(self):
         try:
-            self.start()
+            self.machine.start()
             print("[Flow] Starting execution...")
             for job in self.jobs:
                 job.execute()
-                if job.state != "success":
+                if job.machine.current_state != "success":
                     raise Exception(f"Job {job.name} failed.")
-            self.complete()
+            self.machine.complete()
         except Exception as e:
-            self.fail()
+            self.machine.fail()
+
             print(f"[Flow] Failed with error: {e}")
+
+    def __post_init__(self):
+        super().__post_init__()
+        for index, job in enumerate(self.jobs, start=1):
+            job.set_indexes(index)
 
     @classmethod
     def from_file(cls, filepath: str) -> "Flow":
@@ -47,20 +49,20 @@ class Flow(StateModel, forbid_unknown_fields=True):
     def from_string(cls, raw: str) -> "Flow":
         data = yaml.safe_load(raw)
 
-        print(data)
-
         # return msgspec.yaml.decode(raw, type=cls)
+
+        _logger.warning(f"Data: {data}")
 
         jobs = []
         for job_data in data.get("jobs", []):
-            # actions = [
-            #     Action(**action_data) for action_data in job_data.get("actions", [])
-            # ]
-
             actions = [
-                msgspec.json.decode(json.dumps(action_data), type=Action)
-                for action_data in job_data.get("actions", [])
+                Action(**action_data) for action_data in job_data.get("actions", [])
             ]
+
+            # actions = [
+            #     msgspec.json.decode(json.dumps(action_data), type=Action)
+            #     for action_data in job_data.get("actions", [])
+            # ]
             job = Job(name=job_data["name"], steps=actions)
             jobs.append(job)
 
@@ -77,7 +79,7 @@ jobs:
   - name: job1
     truc: xxx
     steps:
-      - name: example
+      - name: examplex
         wait: true
         autre: false
       - name: example
@@ -91,9 +93,11 @@ jobs:
       - name: example
         wait: true
 """
-    from kinetik import load_all_actions
+    # from kinetik import load_all_actions
 
-    load_all_actions()
-    print(Action.list())
+    print(settings.logfile)
+
+    # load_all_actions()
+    print("actions: " % Action.list())
     flow = Flow.from_string(data)
     flow.execute()
