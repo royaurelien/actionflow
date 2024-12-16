@@ -10,18 +10,18 @@ jobs:
     steps:
       - name: example
         with:
-          wait: false
+          concurrency: false
       - name: fail
         with:
-          wait: false
+          concurrency: false
       - name: example
         with:
-          wait: true
+          concurrency: true
   job2:
     steps:
       - name: example
         with:
-          wait: true
+          concurrency: true
       - name: example
         with:
-          wait: true
+          concurrency: true

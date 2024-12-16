@@ -22,12 +22,19 @@ class FailAction(Action):
         return not bool(self.retry - 1)
 
 
+class BlockingAction(Action):
+    name: str = "example-blocking"
+    description: str = "Blocking action"
+    time: int = 5
+    concurrency: bool = True
+
+    def _run(self):
+        time.sleep(self.time)
+        return True
+
+
 if __name__ == "__main__":
     print(Action.list())
 
     example = ExampleAction(kind="test")
-    # print(example.machine.start())
-    print(example.machine.state)
-
     example.execute()
-    print(example.machine.state)

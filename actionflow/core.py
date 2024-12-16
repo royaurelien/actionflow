@@ -1,6 +1,7 @@
 import importlib
 import pkgutil
 from datetime import datetime
+from pathlib import Path
 from typing import Generator, List, Tuple
 
 import yaml
@@ -49,7 +50,7 @@ class Flow(StateModel):
             Creates a Flow instance from a raw string containing the flow data.
 
         load_all_actions():
-            Loads all action modules from the 'kinetik.actions' package.
+            Loads all action modules from the 'actionflow.actions' package.
 
     """
 
@@ -66,9 +67,16 @@ class Flow(StateModel):
     def jobs_count(self):
         return len(self.jobs)
 
+    @property
+    def exec_time(self) -> float:
+        return self._end - self._start
+
     @staticmethod
     def get_available_actions() -> List[str]:
         return sorted(Action.list())
+
+    def init_workspace(self):
+        Path(self.workspace).mkdir(parents=True, exist_ok=True)
 
     def next_job(self) -> Generator[Tuple[int, Job], None, None]:
         for index, job in enumerate(self.jobs, start=1):
@@ -93,6 +101,10 @@ class Flow(StateModel):
             Exception: If any job fails during execution.
         """
 
+        self._start = datetime.now()
+
+        self.init_workspace()
+
         _logger.info("*" * 50)
         try:
             _logger.info(f"[Flow] Starting execution... ({self.jobs_count} jobs)")
@@ -109,13 +121,18 @@ class Flow(StateModel):
             self.machine.fail()
             return
 
+        self._end = datetime.now()
         self.machine.complete()
 
-    def summary(self):
+    def summary(self) -> Generator[str, None, None]:
         for job_index, job in self.next_job():
+            yield f"Job {job_index}: {job.name}"
             for group_index, group in job.next_group():
+                # yield f"Group {group_index}"
                 for action_index, action in group.next_action():
-                    print(action.summary())
+                    yield f"Action {action_index}: {action.name} -> {action._exec_time:.5f} ({action.machine.state})"
+
+        yield f"Total execution time: {self.exec_time}"
 
     @staticmethod
     def load(raw: str) -> dict:
@@ -193,8 +210,7 @@ class Flow(StateModel):
         return cls.model_validate(data)
 
     @staticmethod
-    def load_all_actions():
-        package_name = "actionflow.actions"
+    def load_all_actions(package_name: str = "actionflow.actions") -> None:
         package = importlib.import_module(package_name)
         for _, module_name, is_pkg in pkgutil.iter_modules(package.__path__):
             if not is_pkg:
@@ -214,21 +230,21 @@ jobs:
     steps:
       - name: example
         with:
-          wait: false
+          concurrency: false
       - name: fail
         with:
-          wait: false
+          concurrency: false
       - name: example
         with:
-          wait: true
+          concurrency: true
   job2:
     steps:
       - name: example
         with:
-          wait: true
+          concurrency: true
       - name: example
         with:
-          wait: true
+          concurrency: true
 """
     from actionflow import load_all_actions
 

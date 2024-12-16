@@ -73,7 +73,7 @@ class Job(StateModel):
             Returns the number of steps in the job.
 
         grouped() -> List[List[Action]]:
-            Groups the steps by the "wait" attribute.
+            Groups the steps by the "concurrency" attribute.
 
         set_indexes(index: int) -> None:
             Sets unique indexes for each action in the job.
@@ -114,7 +114,7 @@ class Job(StateModel):
 
     @property
     def grouped(self) -> List[List[Action]]:
-        return group_by(self.steps, "wait")
+        return group_by(self.steps, "concurrency")
 
     def set_indexes(self, index: int) -> None:
         for group_index, group in enumerate(self.grouped, start=1):

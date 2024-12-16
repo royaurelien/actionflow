@@ -1,0 +1,12 @@
+site_name: ActionFlow Documentation
+theme:
+  name: readthedocs
+nav:
+  - Home: index.md
+  - CLI Commands: cli.md
+  - Web Server: server.md
+  - API Reference: api.md
+plugins:
+  - search
+  - mkdocstrings
+  - mermaid2

@@ -3,11 +3,9 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
-__all__ = ["settings"]
 
-
-def get_default_workdir():
-    return str(Path.home() / ".upgrades")
+def get_default_path():
+    return str(Path.home() / ".actionflow")
 
 
 class Environment(BaseSettings):
@@ -16,32 +14,32 @@ class Environment(BaseSettings):
         env_file_encoding = "utf-8"
         case_sensitive = True
         extra = "allow"
-        # env_prefix = "UPG_"
+        env_prefix = "AF_"
 
 
 class Settings(BaseSettings):
-    workdir: str = os.getenv("KINETIK_WORKDIR", default=get_default_workdir())
-    logfile: str = "main.log"
+    _path: str = get_default_path()
+    _logname: str = "main.log"
 
+    debug: bool = False
     env: Environment = Environment()
 
     @property
-    def config_dir(self):
-        return os.path.join(self.workdir, ".config")
+    def state_filepath(self):
+        return os.path.join(self._path, "state.json")
 
     @property
-    def state_file(self):
-        return os.path.join(self.workdir, ".config", "state.json")
+    def logfile(self):
+        return os.path.join(self._path, self._logname)
 
     def get_path(self, *args):
-        return os.path.join(self.workdir, *args)
+        return os.path.join(self._path, *args)
 
     def setup_workdir(self):
-        workdir = Path(self.workdir)
-        workdir.mkdir(parents=True, exist_ok=True)
-
-        (workdir / ".config").mkdir(parents=True, exist_ok=True)
-        (workdir / "logs").mkdir(parents=True, exist_ok=True)
+        print("Setting up workdir {}".format(self._path))
+        print(self.logfile)
+        path = Path(self._path)
+        path.mkdir(parents=True, exist_ok=True)
 
 
 settings = Settings()

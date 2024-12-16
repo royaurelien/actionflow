@@ -16,7 +16,7 @@ __all__ = ["logger", "_logger", "logs"]
 class LogConfig(BaseModel):
     LOGGER_NAME: str = "actionflow"
     LOG_FORMAT: str = "%(asctime)s | %(levelprefix)s | %(message)s"
-    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "DEBUG")
+    LOG_LEVEL: str = "DEBUG" if settings.debug else "INFO"
 
     # Logging config
     version: int = 1
@@ -37,7 +37,7 @@ class LogConfig(BaseModel):
         "file": {
             "formatter": "default",
             "class": "logging.FileHandler",
-            "filename": os.path.join(os.getcwd(), "actionflow.log"),
+            "filename": settings.logfile,
         },
     }
     loggers: dict = {

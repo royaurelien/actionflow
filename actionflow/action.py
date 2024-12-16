@@ -54,7 +54,7 @@ class Action(BaseAction, StateModel):
     _exec_time: float
     name: str = None
     description: str
-    wait: bool = True
+    concurrency: bool = False
     retry: int = 1
     skip: bool = False
     continue_on_error: bool = False
