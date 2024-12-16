@@ -14,8 +14,6 @@ __all__ = ["logger", "_logger", "logs"]
 
 
 class LogConfig(BaseModel):
-    """Logging configuration to be set for the server"""
-
     LOGGER_NAME: str = "upgradekit"
     LOG_FORMAT: str = "%(asctime)s | %(levelprefix)s | %(message)s"
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "DEBUG")

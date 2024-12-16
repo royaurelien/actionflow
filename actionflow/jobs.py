@@ -11,6 +11,22 @@ from actionflow.tools import group_by
 
 
 class Group(StateModel):
+    """
+    A class representing a group of actions to be executed in parallel.
+
+    Attributes:
+        actions (List[Action]): A list of actions to be executed.
+
+    Methods:
+        next_action() -> Generator[Tuple[int, Action], None, None]:
+            Yields the index and action for each action in the group.
+
+        execute():
+            Executes all actions in the group in parallel. If any action fails,
+            the group's state is set to 'fail'. If all actions succeed, the group's
+            state is set to 'complete'.
+    """
+
     actions: List[Action]
 
     def next_action(self) -> Generator[Tuple[int, Action], None, None]:
@@ -42,6 +58,33 @@ class Group(StateModel):
 
 
 class Job(StateModel):
+    """
+    Represents a job consisting of a series of actions to be executed.
+
+    Attributes:
+        name (str): The name of the job.
+        steps (List[Action]): A list of actions to be executed as part of the job.
+
+    Methods:
+        preprocess_data(cls, values):
+            Replaces steps with action instances created from the registry.
+
+        length() -> int:
+            Returns the number of steps in the job.
+
+        grouped() -> List[List[Action]]:
+            Groups the steps by the "wait" attribute.
+
+        set_indexes(index: int) -> None:
+            Sets unique indexes for each action in the job.
+
+        next_group() -> Generator[Tuple[int, Group], None, None]:
+            Yields the next group of actions to be executed.
+
+        execute():
+            Executes the job by running all actions in sequence, handling state transitions and logging.
+    """
+
     name: str
     steps: List[Action]
 
@@ -99,7 +142,6 @@ class Job(StateModel):
                 group.execute()
                 if group.machine.state != "success":
                     self.machine.fail()
-                    # raise Exception("Group execution failed.")
                     return
 
                 _logger.info(

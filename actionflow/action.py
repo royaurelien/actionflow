@@ -7,8 +7,6 @@ from actionflow.context import Context
 from actionflow.exceptions import ActionNotFound
 from actionflow.logger import _logger, log_execution
 
-# from kinetik.tools import update
-
 
 class BaseAction(ABC):
     name: str
@@ -63,7 +61,6 @@ class Action(BaseAction, StateModel):
 
     shared_resources: SharedResources = SharedResources()
 
-    # @update("update_ts")
     @log_execution("_exec_time")
     def run(self) -> bool:
         """Run the action with retry logic"""

@@ -10,10 +10,49 @@ from actionflow.common import StateModel
 from actionflow.context import Context
 from actionflow.jobs import Job
 from actionflow.logger import _logger
-from actionflow.tools import load_yaml_with_context
+from actionflow.tools import parse_yaml
 
 
 class Flow(StateModel):
+    """
+    Flow class represents a sequence of jobs to be executed in a defined order.
+
+    Attributes:
+        name (str): The name of the flow.
+        jobs (List[Job]): A list of jobs to be executed in the flow.
+        env (dict): A dictionary containing environment variables for the flow.
+        context (dict): A dictionary containing context information for the flow.
+        workspace (str): The workspace directory for the flow.
+        _start (datetime): The start time of the flow execution.
+        _end (datetime): The end time of the flow execution.
+
+    Properties:
+        jobs_count (int): Returns the number of jobs in the flow.
+
+    Methods:
+        next_job() -> Generator[Tuple[int, Job], None, None]:
+            Yields the index and job for each job in the flow.
+
+        execute():
+            Raises an exception if any job fails during execution.
+
+        summary():
+            Prints a summary of the actions in each job of the flow.
+
+        load(raw: str) -> dict:
+            Loads flow data from a YAML string and returns a dictionary containing the parsed flow data.
+
+        from_file(filepath: str) -> "Flow":
+            Creates a Flow instance from a file containing the flow data.
+
+        from_string(raw: str) -> "Flow":
+            Creates a Flow instance from a raw string containing the flow data.
+
+        load_all_actions():
+            Loads all action modules from the 'kinetik.actions' package.
+
+    """
+
     name: str
     jobs: List[Job]
     env: dict = {}
@@ -26,6 +65,10 @@ class Flow(StateModel):
     @property
     def jobs_count(self):
         return len(self.jobs)
+
+    @staticmethod
+    def get_available_actions() -> List[str]:
+        return sorted(Action.list())
 
     def next_job(self) -> Generator[Tuple[int, Job], None, None]:
         for index, job in enumerate(self.jobs, start=1):
@@ -91,7 +134,7 @@ class Flow(StateModel):
 
         data = yaml.safe_load(raw)
         env = data.get("env", {})
-        parsed_data = load_yaml_with_context(raw, env)
+        parsed_data = parse_yaml(raw, env)
 
         jobs = [
             {
@@ -150,7 +193,7 @@ class Flow(StateModel):
 
     @staticmethod
     def load_all_actions():
-        package_name = "kinetik.actions"
+        package_name = "actionflow.actions"
         package = importlib.import_module(package_name)
         for _, module_name, is_pkg in pkgutil.iter_modules(package.__path__):
             if not is_pkg:

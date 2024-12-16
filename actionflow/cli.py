@@ -2,32 +2,12 @@ import argparse
 import atexit
 import os
 import sys
-from multiprocessing import Lock
 
 from actionflow.core import Flow
-
-LOCK_FILE = "/tmp/my_program.lock"
-
-lock = Lock()
-
-
-def create_lock_file():
-    if os.path.exists(LOCK_FILE):
-        print(
-            f"Le programme est déjà en cours d'exécution. Fichier de verrou : {LOCK_FILE}"
-        )
-        sys.exit(1)
-    with open(LOCK_FILE, "w") as lock_file:
-        lock_file.write(str(os.getpid()))
-
-
-def remove_lock_file():
-    if os.path.exists(LOCK_FILE):
-        os.remove(LOCK_FILE)
+from actionflow.tools import create_pidfile, remove_pidfile
 
 
 def run(filepath: str, verbose: bool):
-    # Validate the file path
     if not os.path.isfile(filepath):
         print(f"Error: The file '{filepath}' does not exist.", file=sys.stderr)
         sys.exit(1)
@@ -36,8 +16,14 @@ def run(filepath: str, verbose: bool):
         print(f"Processing file: {filepath}")
 
     try:
-        create_lock_file()
+        create_pidfile()
         Flow.load_all_actions()
+        available_actions = Flow.get_available_actions()
+
+        print(
+            f'Available actions ({len(available_actions)}):\n\t{"\n\t".join(available_actions)}'
+        )
+
         flow = Flow.from_file(filepath)
         flow.execute()
         flow.summary()
@@ -46,23 +32,18 @@ def run(filepath: str, verbose: bool):
         print(f"Error processing file: {e}", file=sys.stderr)
         sys.exit(1)
     finally:
-        atexit.register(remove_lock_file)
+        atexit.register(remove_pidfile)
 
 
 def logs():
     """Fetch and display logs."""
-    print("Fetching logs...")  # Replace with actual log fetching logic
-    print("Logs fetched successfully.")  # Example of success message
 
 
 def status():
     """Check and display the current status."""
-    print("Fetching current status...")  # Replace with actual status checking logic
-    print("Status fetched successfully.")  # Example of success message
 
 
 def main():
-    """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(description="ActionFlow CLI")
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
