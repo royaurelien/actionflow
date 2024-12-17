@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+
+<html class="writer-html5" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="None" name="description"/>
+<link href="img/favicon.ico" rel="shortcut icon"/>
+<title>ActionFlow Documentation</title>
+<link href="css/theme.css" rel="stylesheet"/>
+<link href="css/theme_extra.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" rel="stylesheet"/>
+<link href="assets/_mkdocstrings.css" rel="stylesheet"/>
+<script>
+        // Current page data
+        var mkdocs_page_name = "Home";
+        var mkdocs_page_input_path = "index.md";
+        var mkdocs_page_url = null;
+      </script>
+<!--[if lt IE 9]>
+      <script src="js/html5shiv.min.js"></script>
+    <![endif]-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+</head>
+<body class="wy-body-for-nav" role="document">
+<div class="wy-grid-for-nav">
+<nav class="wy-nav-side stickynav" data-toggle="wy-nav-shift">
+<div class="wy-side-scroll">
+<div class="wy-side-nav-search">
+<a class="icon icon-home" href="."> ActionFlow Documentation
+        </a><div role="search">
+<form action="./search.html" class="wy-form" id="rtd-search-form" method="get">
+<input aria-label="Search docs" name="q" placeholder="Search docs" title="Type search term here" type="text"/>
+</form>
+</div>
+</div>
+<div aria-label="Navigation menu" class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation">
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal current" href="#">Home</a>
+<ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="#explanation">Explanation</a>
+<ul>
+<li class="toctree-l3"><a class="reference internal" href="#state-management-in-actions">State Management in Actions</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cli/">CLI Commands</a>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="" href="server.md">Web Server</a>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/">API Reference</a>
+</li>
+</ul>
+</div>
+</div>
+</nav>
+<section class="wy-nav-content-wrap" data-toggle="wy-nav-shift">
+<nav aria-label="Mobile navigation menu" class="wy-nav-top" role="navigation">
+<i class="fa fa-bars" data-toggle="wy-nav-top"></i>
+<a href=".">ActionFlow Documentation</a>
+</nav>
+<div class="wy-nav-content">
+<div class="rst-content"><div aria-label="breadcrumbs navigation" role="navigation">
+<ul class="wy-breadcrumbs">
+<li><a aria-label="Docs" class="icon icon-home" href="."></a></li>
+<li class="breadcrumb-item active">Home</li>
+<li class="wy-breadcrumbs-aside">
+</li>
+</ul>
+<hr/>
+</div>
+<div class="document" itemscope="itemscope" itemtype="http://schema.org/Article" role="main">
+<div class="section" itemprop="articleBody">
+<h1 id="actionflow">ActionFlow</h1>
+<p>The diagram below shows the relationship between the core concepts of ActionFlow: Flow, Job, Group, and Actions.</p>
+<div class="mermaid">graph TD
+    A[Flow] --&gt;|Contains| B[Job]
+    B --&gt;|Has Groups Based on Actions' Wait Attribute| C[Group]
+    C --&gt;|Executes| D[Action]
+
+    D --&gt;|Has State Machine| D1[Pending]
+    D --&gt;|Has State Machine| D2[Running]
+    D --&gt;|Has State Machine| D3[Success or Failure]
+
+    style A fill:#1f77b4,stroke:#fff,stroke-width:2px
+    style B fill:#ff7f0e,stroke:#fff,stroke-width:2px
+    style C fill:#2ca02c,stroke:#fff,stroke-width:2px
+    style D fill:#d62728,stroke:#fff,stroke-width:2px
+</div>
+<h2 id="explanation">Explanation</h2>
+<ol>
+<li><strong>Flow</strong>: The top-level entity that orchestrates the entire workflow. It contains multiple <strong>Jobs</strong>.</li>
+<li><strong>Job</strong>: Represents a collection of actions that execute sequentially. Each job is divided into <strong>Groups</strong>.</li>
+<li><strong>Group</strong>: Actions within a job are grouped based on their <code>wait</code> attribute. Actions in the same group can run in parallel.</li>
+<li><strong>Action</strong>: The smallest executable unit, which follows a predefined state machine (<code>Pending</code>, <code>Running</code>, <code>Success</code>, <code>Failure</code>).</li>
+</ol>
+<h3 id="state-management-in-actions">State Management in Actions</h3>
+<p>Each <strong>Action</strong> is governed by a state machine with the following states:</p>
+<ul>
+<li><strong>Pending</strong>: Action is queued for execution.</li>
+<li><strong>Running</strong>: Action is in progress.</li>
+<li><strong>Success</strong>: Action completed successfully.</li>
+<li><strong>Failure</strong>: Action failed during execution.</li>
+</ul>
+</div>
+</div><footer>
+<div aria-label="Footer Navigation" class="rst-footer-buttons" role="navigation">
+<a class="btn btn-neutral float-right" href="cli/" title="CLI Commands">Next <span class="icon icon-circle-arrow-right"></span></a>
+</div>
+<hr/>
+<div role="contentinfo">
+<!-- Copyright etc -->
+</div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+</div>
+</div>
+</section>
+</div>
+<div aria-label="Versions" class="rst-versions" role="note">
+<span class="rst-current-version" data-toggle="rst-current-version">
+<span><a href="cli/" style="color: #fcfcfc">Next »</a></span>
+</span>
+</div>
+<script src="js/jquery-3.6.0.min.js"></script>
+<script>var base_url = ".";</script>
+<script src="js/theme_extra.js"></script>
+<script src="js/theme.js"></script>
+<script src="search/main.js"></script>
+<script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+<script type="module">import mermaid from "https://unpkg.com/mermaid@10.4.0/dist/mermaid.esm.min.mjs";
+mermaid.initialize({});</script></body>
+</html>
+<!--
+MkDocs version : 1.6.1
+Build Date UTC : 2024-12-17 00:15:02.597426+00:00
+-->
