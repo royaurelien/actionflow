@@ -1,10 +1,12 @@
 import threading
 from typing import Any, Dict
 
+from pydantic import BaseModel
+
 from actionflow.exceptions import ContextAlreadyInitialized
 
 
-class Context:
+class _Context:
     """
     Context is a singleton class that provides a thread-safe way to store and access shared data.
 
@@ -95,3 +97,31 @@ class Context:
         """
 
         self.data.clear()
+
+
+class SingletonBaseModel:
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls, *args, **kwargs):
+        # Double vérification pour éviter la concurrence.
+        if not cls._instance:
+            with cls._lock:
+                if not cls._instance:
+                    cls._instance = super(SingletonBaseModel, cls).__new__(
+                        cls, *args, **kwargs
+                    )
+        return cls._instance
+
+
+class __Context(BaseModel, SingletonBaseModel):
+    workspace: str = "/tmp"
+    mode: str
+    test: bool
+
+    # def __init__(self, **data):
+    #     super().__init__(**data)
+
+
+class Context(BaseModel):
+    workspace: str = "/tmp"

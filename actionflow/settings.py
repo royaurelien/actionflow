@@ -18,7 +18,8 @@ class Environment(BaseSettings):
 
 
 class Settings(BaseSettings):
-    _path: str = get_default_path()
+    _name: str = "actionflow"
+    _path: str = str(Path.home() / ".actionflow")
     _logname: str = "main.log"
 
     debug: bool = False

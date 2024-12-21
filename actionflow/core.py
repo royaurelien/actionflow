@@ -2,7 +2,7 @@ import importlib
 import pkgutil
 from datetime import datetime
 from pathlib import Path
-from typing import Generator, List, Tuple
+from typing import Any, Generator, List, Tuple
 
 import yaml
 
@@ -57,11 +57,14 @@ class Flow(StateModel):
     name: str
     jobs: List[Job]
     env: dict = {}
-    context: dict = {}
-    workspace: str
+    context: Context
 
     _start: datetime = None
     _end: datetime = None
+
+    @property
+    def workspace(self) -> str:
+        return self.context.workspace
 
     @property
     def jobs_count(self):
@@ -135,7 +138,7 @@ class Flow(StateModel):
         yield f"Total execution time: {self.exec_time}"
 
     @staticmethod
-    def load(raw: str) -> dict:
+    def load(raw: str, obj: "Context") -> dict:
         """
         Load flow data from a YAML string.
 
@@ -162,15 +165,17 @@ class Flow(StateModel):
             for k, v in parsed_data["jobs"].items()
         ]
 
-        context = Context()
-        context.initialize(parsed_data.get("context", {}))
+        context_vals = data.get("context", {})
+        # print(context_vals)
+        # print(obj)
+        # context = obj(**context_vals)
+        # print(context)
 
         return {
             "name": parsed_data["name"],
             "jobs": jobs,
             "env": env,
-            "workspace": parsed_data.get("context", {}).get("workspace", ""),
-            "context": parsed_data.get("context", {}),
+            "context": context_vals,
         }
 
     @classmethod
@@ -189,9 +194,12 @@ class Flow(StateModel):
             IOError: If there is an error reading the file.
             ValidationError: If the data in the file is not valid for creating a Flow instance.
         """
+
+        obj = cls.model_fields["context"].annotation
+
         with open(filepath, "r") as file:
             raw = file.read()
-            data = cls.load(raw)
+            data = cls.load(raw, obj)
 
         return cls.model_validate(data)
 
@@ -206,15 +214,36 @@ class Flow(StateModel):
         Returns:
             Flow: An instance of the Flow class created from the parsed data.
         """
-        data = cls.load(raw)
+
+        obj = cls.model_fields["context"].annotation
+        data = cls.load(raw, obj)
         return cls.model_validate(data)
 
     @staticmethod
-    def load_all_actions(package_name: str = "actionflow.actions") -> None:
-        package = importlib.import_module(package_name)
-        for _, module_name, is_pkg in pkgutil.iter_modules(package.__path__):
-            if not is_pkg:
-                importlib.import_module(f"{package_name}.{module_name}")
+    def load_all_actions(*args) -> None:
+        names = list(map(str, args))
+
+        if not names or "actionflow.actions" not in names:
+            names.insert(0, "actionflow.actions")
+
+        _logger.debug(f"Loading actions from: {', '.join(names)}")
+
+        for package_name in names:
+            package = importlib.import_module(package_name)
+            for _, module_name, is_pkg in pkgutil.iter_modules(package.__path__):
+                if not is_pkg:
+                    importlib.import_module(f"{package_name}.{module_name}")
+
+        _logger.info(
+            f"Loaded actions ({len(Action.list())}): {', '.join(Action.list())}"
+        )
+
+    def model_post_init(self, __context: Any) -> None:
+        # Add context to steps
+        for job in self.jobs:
+            for step in job.steps:
+                step._context = self.context
+        super().model_post_init(__context)
 
 
 if __name__ == "__main__":
@@ -222,6 +251,8 @@ if __name__ == "__main__":
 name: example
 context:
   mode: test
+  workspace: /tmp
+  test: true
 env:
   key1: value1
   key2: value2
@@ -246,10 +277,8 @@ jobs:
         with:
           concurrency: true
 """
-    from actionflow import load_all_actions
 
-    load_all_actions()
-    print(Action.list())
+    Flow.load_all_actions()
 
     flow = Flow.from_string(raw)
     flow.execute()

@@ -4,7 +4,7 @@ import os
 import sys
 
 from actionflow.core import Flow
-from actionflow.tools import create_pidfile, remove_pidfile
+from actionflow.tools import create_pidfile, remove_pidfile, tail_logs
 
 
 def run(filepath: str, verbose: bool):
@@ -61,6 +61,7 @@ def run(filepath: str, verbose: bool):
 
 def logs():
     """Fetch and display logs."""
+    tail_logs()
 
 
 def status():

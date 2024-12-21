@@ -2,6 +2,7 @@ name: example
 context:
   workspace: /tmp
   mode: test
+  test: false
 env:
   key1: value1
   key2: value2

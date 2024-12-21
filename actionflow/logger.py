@@ -10,11 +10,11 @@ from watchdog.observers import Observer
 
 from actionflow.settings import settings
 
-__all__ = ["logger", "_logger", "logs"]
+__all__ = ["_logger", "logs"]
 
 
 class LogConfig(BaseModel):
-    LOGGER_NAME: str = "actionflow"
+    LOGGER_NAME: str = settings._name
     LOG_FORMAT: str = "%(asctime)s | %(levelprefix)s | %(message)s"
     LOG_LEVEL: str = "DEBUG" if settings.debug else "INFO"
 
@@ -47,7 +47,7 @@ class LogConfig(BaseModel):
 
 dictConfig(LogConfig().model_dump())
 
-_logger = logger = logging.getLogger("actionflow")
+_logger = logging.getLogger(settings._name)
 
 
 def logs(function):
@@ -56,12 +56,12 @@ def logs(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
         start = time.perf_counter()
-        logger.debug("%s: start", function.__qualname__)
+        _logger.debug("%s: start", function.__qualname__)
         output = function(*args, **kwargs)
 
         end = time.perf_counter()
         message = f"{function.__qualname__}: end ({end - start:.6f})"  # noqa: E231
-        logger.debug(message)
+        _logger.debug(message)
 
         return output
 

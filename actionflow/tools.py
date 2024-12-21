@@ -18,9 +18,13 @@ except ImportError:
 
 
 from actionflow.logger import _logger
-from actionflow.settings import Environment
+from actionflow.settings import Environment, settings
 
 PID_FILE = "/tmp/actionflow.pid"
+
+
+def tail_logs() -> None:
+    subprocess.run(["tail", "-f", settings.logfile])
 
 
 class SingletonMeta(type):

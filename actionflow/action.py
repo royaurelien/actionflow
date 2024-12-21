@@ -10,7 +10,7 @@ from actionflow.logger import _logger, log_execution
 
 class BaseAction(ABC):
     name: str
-    _context: Context = Context()
+    _context: Context
     _subclasses: dict = {}
 
     @classmethod
