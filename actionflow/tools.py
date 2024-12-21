@@ -1,3 +1,4 @@
+import configparser
 import os
 import re
 import subprocess
@@ -8,6 +9,7 @@ from string import Template
 from typing import Any, List
 
 import yaml
+from pydantic import BaseModel
 
 try:
     from git import InvalidGitRepositoryError, Repo
@@ -19,6 +21,26 @@ from actionflow.logger import _logger
 from actionflow.settings import Environment
 
 PID_FILE = "/tmp/actionflow.pid"
+
+
+class SingletonMeta(type):
+    """
+    The Singleton class can be implemented in different ways in Python. Some
+    possible methods include: base class, decorator, metaclass. We will use the
+    metaclass because it is best suited for this purpose.
+    """
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        """
+        Possible changes to the value of the `__init__` argument do not affect
+        the returned instance.
+        """
+        if cls not in cls._instances:
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return cls._instances[cls]
 
 
 # def effective_access(*args, **kwargs):
@@ -286,3 +308,26 @@ def get_local_repository(path: str, remote_name: str = "origin") -> tuple:
         return None, None
 
     return branch, remote
+
+
+def convert_schema_to_ini(
+    schema: BaseModel, filepath: str, section_name: str = "options"
+) -> None:
+    config = configparser.ConfigParser()
+
+    def convert_value(value):
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        if value is None:
+            return ""
+        return str(value)
+
+    # Add the schema fields and their values to a section
+    config[section_name] = {
+        key: convert_value(value) for key, value in schema.model_dump().items()
+    }
+
+    # Write the configuration to an .ini file
+    with open(filepath, "w") as configfile:
+        config.write(configfile)
+    _logger.info(f"Configuration saved to {filepath}")

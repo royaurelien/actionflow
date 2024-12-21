@@ -1,8 +1,5 @@
-from typing import List
-
 from actionflow.action import Action
 from actionflow.logger import _logger
-from actionflow.models import ImageSchema
 
 try:
     import docker as docker
@@ -14,59 +11,99 @@ except ImportError:
     client = None
 
 
-class Pull(Action):
+class ContainerAction(Action):
     """
-    Action to pull Docker images.
-
-    Attributes:
-        name (str): The name of the action, default is "pull".
-        description (str): A brief description of the action, default is "Pull docker images".
-        registry (str): The Docker registry to pull images from.
-        login (str): The login username for the Docker registry.
-        password (str): The login password for the Docker registry.
-        images (List[ImageSchema]): A list of images to be pulled, defined by the ImageSchema.
-
-    Methods:
-        _get_credentials() -> dict:
-            Retrieves the credentials for Docker registry authentication.
-
-        _check() -> bool:
-            Checks if all specified images are already present in the local Docker client.
-
-        _run() -> bool:
-            Pulls the specified images from the Docker registry if they are not already present.
+    ContainerAction represents an action to be performed on a Docker container.
     """
 
-    name: str = "pull"
-    description: str = "Pull docker images"
+    name: str = "container-action"
+    description: str = "Container action"
+    wait: bool = True
+    container: str
+    commands: list[str]
+    user: str = "odoo"
+    tty: bool = False
+    stream: bool = False
+    workdir: str = "/var/lib/odoo/.local/upgrade"
 
-    registry: str = None
-    login: str = None
-    password: str = None
-    images: List[ImageSchema]
+    @property
+    def services(self):
+        return self.context.services.list()
 
-    def _get_credentials(self) -> dict:
-        vals = {"registry": self.registry} if self.registry else {}
-        if self.login and self.password:
-            vals.update({"username": self.login, "password": self.password})
-
-        return {"auth_config": vals}
-
-    def _check(self) -> bool:
+    def _check(self):
         try:
-            return all(client.images.get(image.name) for image in self.images)
-        except docker.errors.ImageNotFound:
+            client.containers.get(self.container)
+        except docker.errors.NotFound:
             return False
+        return True
 
-    def _run(self) -> bool:
-        for image in self.images:
-            try:
-                client.images.get(image.name)
-            except docker.errors.ImageNotFound:
-                _logger.info(f"Image {image.name} not found")
+    def _parse(self, chunk):
+        print(chunk, end="")
 
-                client.images.pull(repository=image.repository, tag=image.tag)
-                _logger.info(f"Image {image.name} pulled")
-            else:
-                _logger.info(f"Image {image.name} already exists")
+    def _run(self):
+        container = client.containers.get(self.container)
+
+        if not self.stream:
+            for command in self.commands:
+                try:
+                    exec_result = container.exec_run(
+                        command,
+                        tty=self.tty,
+                        user=self.user,
+                        environment={"PIP_ROOT_USER_ACTION": "ignore"},
+                        workdir=self.workdir,
+                    )
+
+                    print(
+                        f"Running command '{command}' in container '{container.name}'"
+                    )
+                    print("Command output:")
+                    print(exec_result.output.decode("utf-8"))
+
+                    assert exec_result.exit_code == 0, "Command failed"
+
+                except Exception as e:
+                    print(f"Error while running command: {e}")
+                    return False
+        else:
+            for command in self.commands:
+                try:
+                    # Run the command with streaming enabled
+                    exec_id = container.client.api.exec_create(
+                        container.id,
+                        command,
+                        tty=True,
+                        workdir=self.workdir,
+                        user=self.user,
+                    )
+                    output_stream = container.client.api.exec_start(
+                        exec_id["Id"], stream=True
+                    )
+
+                    # Stream the output
+                    # INFO source odoo.modules.loading: Loading module account_taxcloud (65/66)
+                    print("Streaming command output:")
+                    # addons = 0
+                    for chunk in output_stream:
+                        self._parse(chunk.decode("utf-8"))
+
+                    #     if "Loading module" in line:
+                    #         # Compile and use the regex to extract the required information
+                    #         pattern = r": Loading module (\w+) \((\d+)/(\d+)\)"
+                    #         match = re.search(pattern, line)
+                    #         if match:
+                    #             result = {
+                    #                 "name": match.group(1),
+                    #                 "index": int(match.group(2)),
+                    #                 "total": int(match.group(3)),
+                    #             }
+                    #             print(result)
+                    #             addons += 1
+
+                    # print(f"Total addons: {addons}")
+
+                except Exception as e:
+                    print(f"Error while running command: {e}")
+                    return False
+
         return True
