@@ -41,16 +41,16 @@ def run(filepath: str, verbose: bool):
     try:
         create_pidfile()
         Flow.load_all_actions()
-        available_actions = Flow.get_available_actions()
+        # available_actions = Flow.get_available_actions()
 
-        print(
-            f'Available actions ({len(available_actions)}):\n\t{"\n\t".join(available_actions)}'
-        )
+        # print(
+        #     f'Available actions ({len(available_actions)}):\n\t{"\n\t".join(available_actions)}'
+        # )
 
         flow = Flow.from_file(filepath)
         flow.execute()
-        for line in flow.summary():
-            print(line)
+        # for line in flow.summary():
+        #     print(line)
 
     except Exception as e:
         print(f"Error processing file: {e}", file=sys.stderr)

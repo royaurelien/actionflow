@@ -1,13 +1,12 @@
 import logging
-import os
 import time
 from functools import wraps
 from logging.config import dictConfig
 
 from pydantic import BaseModel
-from watchdog.events import FileSystemEventHandler
-from watchdog.observers import Observer
 
+# from watchdog.events import FileSystemEventHandler
+# from watchdog.observers import Observer
 from actionflow.settings import settings
 
 __all__ = ["_logger", "logs"]
@@ -47,7 +46,12 @@ class LogConfig(BaseModel):
 
 dictConfig(LogConfig().model_dump())
 
+
+print(LogConfig().model_dump())
+
 _logger = logging.getLogger(settings._name)
+
+print(_logger)
 
 
 def logs(function):
@@ -82,7 +86,11 @@ def log_execution(fieldnames: str):
             attrs = fieldnames.split(".")
             for attr in attrs[:-1]:
                 obj = getattr(obj, attr)
-            setattr(obj, attrs[-1], end - start)
+
+            try:
+                setattr(obj, attrs[-1], end - start)
+            except AttributeError as error:
+                _logger.error(f"Error setting attribute: {error}")
 
             return output
 
@@ -91,27 +99,27 @@ def log_execution(fieldnames: str):
     return decorator_repeat
 
 
-class LogFileHandler(FileSystemEventHandler):
-    """
-    Custom handler to process file modifications.
-    """
+# class LogFileHandler(FileSystemEventHandler):
+#     """
+#     Custom handler to process file modifications.
+#     """
 
-    def __init__(self, file_path):
-        self.file_path = file_path
+#     def __init__(self, file_path):
+#         self.file_path = file_path
 
-    def on_modified(self, event):
-        if event.src_path == self.file_path:
-            with open(self.file_path, "r") as file:
-                # Print only the new lines
-                print(file.readlines()[-1], end="")
+#     def on_modified(self, event):
+#         if event.src_path == self.file_path:
+#             with open(self.file_path, "r") as file:
+#                 # Print only the new lines
+#                 print(file.readlines()[-1], end="")
 
 
-def getLogfileObserver():
-    """Get observer for log file"""
+# def getLogfileObserver():
+#     """Get observer for log file"""
 
-    observer = Observer()
-    observer.schedule(
-        LogFileHandler(os.path.join(settings.workdir, settings.logfile)),
-        os.path.join(settings.workdir, settings.logfile),
-    )
-    return observer
+#     observer = Observer()
+#     observer.schedule(
+#         LogFileHandler(os.path.join(settings.workdir, settings.logfile)),
+#         os.path.join(settings.workdir, settings.logfile),
+#     )
+#     return observer

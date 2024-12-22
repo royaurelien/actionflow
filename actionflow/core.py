@@ -8,7 +8,7 @@ import yaml
 
 from actionflow.action import Action
 from actionflow.common import StateModel
-from actionflow.context import Context
+from actionflow.context import Context, Workspace
 from actionflow.jobs import Job
 from actionflow.logger import _logger
 from actionflow.tools import parse_yaml
@@ -64,7 +64,7 @@ class Flow(StateModel):
 
     @property
     def workspace(self) -> str:
-        return self.context.workspace
+        return self.context.workspace.path
 
     @property
     def jobs_count(self):
@@ -106,7 +106,7 @@ class Flow(StateModel):
 
         self._start = datetime.now()
 
-        self.init_workspace()
+        # self.init_workspace()
 
         _logger.info("*" * 50)
         try:
@@ -133,7 +133,7 @@ class Flow(StateModel):
             for group_index, group in job.next_group():
                 # yield f"Group {group_index}"
                 for action_index, action in group.next_action():
-                    yield f"Action {action_index}: {action.name} -> {action._exec_time:.5f} ({action.machine.state})"
+                    yield f"Action {action_index}: {action.name} -> {action.exec_time:.5f} ({action.machine.state})"
 
         yield f"Total execution time: {self.exec_time}"
 
@@ -166,6 +166,7 @@ class Flow(StateModel):
         ]
 
         context_vals = data.get("context", {})
+        context_vals["workspace"] = Workspace(path=context_vals.pop("workspace"))
         # print(context_vals)
         # print(obj)
         # context = obj(**context_vals)

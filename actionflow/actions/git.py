@@ -30,7 +30,13 @@ class Checkout(Action):
 
         return True
 
+    # def _pre_process(self):
+    #     _logger.info(f"Checking out {self.repository} to {self.path}")
+    #     if not os.path.exists(self.path):
+    #         os.makedirs(self.path)
+
     def _run(self) -> bool:
+        return True
         if self._check():
             _logger.info("Repository is already checked out")
             return True

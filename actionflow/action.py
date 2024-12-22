@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from actionflow.common import SharedResources, StateModel
 from actionflow.context import Context
 from actionflow.exceptions import ActionNotFound
-from actionflow.logger import _logger, log_execution
+from actionflow.logger import _logger
 
 
 class BaseAction(ABC):
@@ -50,8 +50,8 @@ class BaseAction(ABC):
 
 
 class Action(BaseAction, StateModel):
-    _id: str
-    _exec_time: float
+    # _id: str
+    exec_time: float = 0.0
     name: str = None
     description: str
     concurrency: bool = False
@@ -61,7 +61,7 @@ class Action(BaseAction, StateModel):
 
     shared_resources: SharedResources = SharedResources()
 
-    @log_execution("_exec_time")
+    # @log_execution("exec_time")
     def run(self) -> bool:
         """Run the action with retry logic"""
         try:
@@ -71,6 +71,7 @@ class Action(BaseAction, StateModel):
                     _logger.info(f"[Action: {self.name}] already satisfied, skipping.")
                     return True
 
+                _logger.info(f"[Action: {self.name}] executing.")
                 self._pre_process()
 
                 if self._run():  # If the action succeeds, stop retrying
@@ -107,5 +108,5 @@ class Action(BaseAction, StateModel):
         return {
             "name": self.name,
             "state": self.machine.state,
-            "exec": self._exec_time,
+            "exec": self.exec_time,
         }
