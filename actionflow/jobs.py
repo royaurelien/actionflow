@@ -1,3 +1,5 @@
+import logging
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Generator, List, Tuple
 
@@ -6,7 +8,6 @@ from pydantic import model_validator
 from actionflow.action import Action
 from actionflow.common import StateModel
 from actionflow.exceptions import ActionNotFound
-from actionflow.logger import _logger
 from actionflow.tools import group_by
 
 
@@ -28,14 +29,22 @@ class Group(StateModel):
     """
 
     actions: List[Action]
+    _stop_event: threading.Event = None
+
+    def model_post_init(self, __context):
+        self._stop_event = threading.Event()
+        return super().model_post_init(__context)
 
     def next_action(self) -> Generator[Tuple[int, Action], None, None]:
         for index, action in enumerate(self.actions, start=1):
             yield index, action
 
     def execute(self):
+        if self._stop_event.is_set():
+            return
+
         try:
-            # _logger.info("[Group] Executing actions in parallel...")
+            # logging.info("[Group] Executing actions in parallel...")
             self.machine.start()
 
             with ThreadPoolExecutor() as executor:
@@ -50,10 +59,11 @@ class Group(StateModel):
 
         except Exception as e:
             self.machine.fail()
-            _logger.info(f"[Group] Failed with error: {e}")
+            self._stop_event.set()
+            logging.info(f"[Group] Failed with error: {e}")
             return
 
-        # _logger.info("[Group] All actions completed successfully.")
+        # logging.info("[Group] All actions completed successfully.")
         self.machine.complete()
 
 
@@ -101,7 +111,7 @@ class Job(StateModel):
             try:
                 action = Action.by_name(name, **params)
             except ActionNotFound:
-                _logger.error(f"Action not found: {name}")
+                logging.error(f"Action not found: {name}")
                 exit(1)
             steps.append(action)
 
@@ -131,11 +141,11 @@ class Job(StateModel):
     def execute(self):
         try:
             self.machine.start()
-            _logger.info(f"[Job: {self.name}] Starting execution...")
+            logging.info(f"[Job: {self.name}] Starting execution...")
 
             total = len(self.grouped)
             for index, group in self.next_group():
-                _logger.info(
+                logging.info(
                     f"[Group {index}/{total}] Executing actions in parallel..."
                 )
 
@@ -144,14 +154,14 @@ class Job(StateModel):
                     self.machine.fail()
                     return
 
-                _logger.info(
+                logging.info(
                     f"[Group {index}/{total}] All actions completed successfully."
                 )
 
-            _logger.info(f"[Job: {self.name}] Completed successfully.")
+            logging.info(f"[Job: {self.name}] Completed successfully.")
 
         except Exception as e:
-            _logger.info(f"[Job: {self.name}] Failed with error: {e}")
+            logging.info(f"[Job: {self.name}] Failed with error: {e}")
             self.machine.fail()
             return
 

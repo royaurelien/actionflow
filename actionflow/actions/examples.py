@@ -1,8 +1,8 @@
+import logging
 import time
 
 from actionflow.action import Action
 from actionflow.context import Workspace
-from actionflow.logger import _logger
 
 
 class ExampleAction(Action):
@@ -11,7 +11,7 @@ class ExampleAction(Action):
     kind: str = None
 
     def _run(self) -> bool:
-        _logger.info(f"Running {self.name} on {Workspace().path}")
+        logging.info(f"Running {self.name} on {Workspace().path}")
         time.sleep(5)
         return True
 

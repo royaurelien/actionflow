@@ -1,7 +1,7 @@
+import logging
 from typing import List
 
 from actionflow.action import Action
-from actionflow.logger import _logger
 from actionflow.models import ImageSchema
 
 try:
@@ -9,7 +9,7 @@ try:
 
     client = docker.from_env()
 except ImportError:
-    _logger.error("Docker SDK not found")
+    logging.error("Docker SDK not found")
     docker = None
     client = None
 
@@ -63,10 +63,10 @@ class Pull(Action):
             try:
                 client.images.get(image.name)
             except docker.errors.ImageNotFound:
-                _logger.info(f"Image {image.name} not found")
+                logging.info(f"Image {image.name} not found")
 
                 client.images.pull(repository=image.repository, tag=image.tag)
-                _logger.info(f"Image {image.name} pulled")
+                logging.info(f"Image {image.name} pulled")
             else:
-                _logger.info(f"Image {image.name} already exists")
+                logging.info(f"Image {image.name} already exists")
         return True

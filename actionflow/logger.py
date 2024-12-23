@@ -1,57 +1,33 @@
 import logging
 import time
 from functools import wraps
-from logging.config import dictConfig
-
-from pydantic import BaseModel
 
 # from watchdog.events import FileSystemEventHandler
 # from watchdog.observers import Observer
 from actionflow.settings import settings
 
-__all__ = ["_logger", "logs"]
 
+def configure_logger(logfile: str = settings.logfile, debug: bool = settings.debug):
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
-class LogConfig(BaseModel):
-    LOGGER_NAME: str = settings._name
-    LOG_FORMAT: str = "%(asctime)s | %(levelprefix)s | %(message)s"
-    LOG_LEVEL: str = "DEBUG" if settings.debug else "INFO"
+    formatter = logging.Formatter(
+        "%(asctime)s - [%(threadName)s] - %(levelname)s - %(message)s"
+    )
+    # "format": "%(asctime)s | %(levelname)s | %(message)s",
 
-    # Logging config
-    version: int = 1
-    disable_existing_loggers: bool = False
-    formatters: dict = {
-        "default": {
-            "format": "%(asctime)s | %(levelname)s | %(message)s",
-            "fmt": LOG_FORMAT,
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-        },
-    }
-    handlers: dict = {
-        "default": {
-            "formatter": "default",
-            "class": "logging.StreamHandler",
-            "stream": "ext://sys.stderr",
-        },
-        "file": {
-            "formatter": "default",
-            "class": "logging.FileHandler",
-            "filename": settings.logfile,
-        },
-    }
-    loggers: dict = {
-        LOGGER_NAME: {"handlers": ["default", "file"], "level": LOG_LEVEL},
-    }
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    console_handler.setFormatter(formatter)
 
+    file_handler = logging.FileHandler(logfile)
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
 
-dictConfig(LogConfig().model_dump())
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
 
-
-print(LogConfig().model_dump())
-
-_logger = logging.getLogger(settings._name)
-
-print(_logger)
+    return logger
 
 
 def logs(function):
@@ -60,12 +36,12 @@ def logs(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
         start = time.perf_counter()
-        _logger.debug("%s: start", function.__qualname__)
+        logging.debug("%s: start", function.__qualname__)
         output = function(*args, **kwargs)
 
         end = time.perf_counter()
         message = f"{function.__qualname__}: end ({end - start:.6f})"  # noqa: E231
-        _logger.debug(message)
+        logging.debug(message)
 
         return output
 
@@ -90,7 +66,7 @@ def log_execution(fieldnames: str):
             try:
                 setattr(obj, attrs[-1], end - start)
             except AttributeError as error:
-                _logger.error(f"Error setting attribute: {error}")
+                logging.error(f"Error setting attribute: {error}")
 
             return output
 

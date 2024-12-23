@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: checkout
         with:
-          repository: git@github.com/OCA/web.git
+          repository: git@github.com:OCA/web.git
           branch: "17.0"
           path: /tmp/web
   job1:

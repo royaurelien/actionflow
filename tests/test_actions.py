@@ -7,7 +7,6 @@ from actionflow.actions.examples import (
     BlockingAction2,
     NonBlockingAction,
 )
-from actionflow.logger import _logger
 
 
 class TestRegistry(unittest.TestCase):
@@ -40,7 +39,7 @@ class TestRegistry(unittest.TestCase):
             time: int = 1
 
             def _run(self):
-                _logger.info(f"Running {self.name} for {self.time} seconds")
+                logging.info(f"Running {self.name} for {self.time} seconds")
                 time.sleep(self.time)
                 return True
 
@@ -63,7 +62,7 @@ class TestRegistry(unittest.TestCase):
         actions = Actions(content)
         NonBlockingAction, BlockingAction1, BlockingAction2
         action_results = actions.run_in_threads()
-        _logger.info(action_results)
+        logging.info(action_results)
 
         # action = CustomAction()
         # self.assertEqual(action.run(), True)

@@ -1,4 +1,5 @@
 import configparser
+import logging
 import os
 import re
 import subprocess
@@ -17,7 +18,6 @@ except ImportError:
     Repo = None
 
 
-from actionflow.logger import _logger
 from actionflow.settings import Environment, settings
 
 PID_FILE = "/tmp/actionflow.pid"
@@ -90,55 +90,31 @@ def remove_pidfile() -> None:
         os.remove(PID_FILE)
 
 
-def group_by(items: List[Any], key: str):
+def group_by(items: List[Any], key: str) -> List[List[Any]]:
     """
-    Groups a list of items based on the boolean value of a specified attribute.
+    Groups consecutive elements from `inputs` based on the value of the specified attribute `attr`.
+    If the attribute value changes, a new group starts.
 
-    Args:
-        items (List[Any]): The list of items to be grouped.
-        key (str): The attribute name used to determine the grouping.
-
-    Returns:
-        List[List[Any]]: A list of groups, where each group is a list of items
-        that share the same boolean value for the specified attribute.
-
-    Example:
-        class Item:
-            def __init__(self, flag):
-                self.flag = flag
-
-        items = [Item(True), Item(True), Item(False), Item(False), Item(True)]
-        grouped = group_by(items, 'flag')
-        # grouped will be [[Item(True), Item(True)], [Item(False), Item(False)], [Item(True)]]
+    :param inputs: List of objects to group
+    :param attr: Attribute name to group by
+    :return: List of lists, where each sublist represents a group
     """
-    result = []
+    groups = []
     current_group = []
-    for item in items:
-        if getattr(item, key) is True:
+
+    for obj in items:
+        if not getattr(obj, key):
             if current_group:
-                if getattr(current_group[-1], key) is True:
-                    current_group.append(item)
-                else:
-                    result.append(current_group)
-                    current_group = [item]
-            else:
-                current_group = [item]
-        elif getattr(item, key) is False:
-            if current_group:
-                if getattr(current_group[-1], key) is True:
-                    current_group.append(item)
-                    result.append(current_group)
-                    current_group = []
-                else:
-                    result.append(current_group)
-                    current_group = [item]
-            else:
-                current_group = [item]
+                groups.append(current_group)
+                current_group = []
+            groups.append([obj])
+        else:
+            current_group.append(obj)
 
     if current_group:
-        result.append(current_group)
+        groups.append(current_group)
 
-    return result
+    return groups
 
 
 def update(fieldnames: str):
@@ -199,12 +175,12 @@ def sync_directories(source: str, target: str) -> bool:
     )
 
     if result.returncode == 0:
-        _logger.info(f"Synced {source} to {target} successfully.")
-        _logger.debug(result.stdout)
+        logging.info(f"Synced {source} to {target} successfully.")
+        logging.debug(result.stdout)
         return True
 
-    _logger.error(f"Error syncing {source} to {target}:")
-    _logger.error(result.stderr)
+    logging.error(f"Error syncing {source} to {target}:")
+    logging.error(result.stderr)
     return False
 
 
@@ -308,7 +284,10 @@ def get_local_repository(path: str, remote_name: str = "origin") -> tuple:
         )
 
     except InvalidGitRepositoryError as error:
-        _logger.info(f"Invalid Git repository: {error}")
+        logging.info(f"Invalid Git repository: {error}")
+        return None, None
+    except Exception as error:
+        logging.error(f"Error checking repository: {error}")
         return None, None
 
     return branch, remote
@@ -334,4 +313,4 @@ def convert_schema_to_ini(
     # Write the configuration to an .ini file
     with open(filepath, "w") as configfile:
         config.write(configfile)
-    _logger.info(f"Configuration saved to {filepath}")
+    logging.info(f"Configuration saved to {filepath}")

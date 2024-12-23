@@ -1,7 +1,7 @@
+import logging
 import os
 
 from actionflow.action import Action
-from actionflow.logger import _logger
 from actionflow.net import download_file
 
 
@@ -15,11 +15,11 @@ class Download(Action):
 
     def _pre_process(self) -> None:
         if os.path.exists(self.filepath):
-            _logger.warning("File already exists: %s", self.filepath)
+            logging.warning("File already exists: %s", self.filepath)
             os.remove(self.filepath)
 
     def _run(self) -> bool:
-        _logger.info(
+        logging.info(
             "Downloading from %s with timeout %d",
             self.url,
             self.timeout,

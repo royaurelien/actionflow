@@ -1,10 +1,9 @@
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
 
 from pydantic import BaseModel
-
-from actionflow.logger import _logger
 
 
 class SingletonMeta(type):
@@ -31,7 +30,7 @@ class Workspace(metaclass=SingletonMeta):
 
     def __post_init__(self):
         Path(self.path).mkdir(parents=True, exist_ok=True)
-        _logger.info("Workspace created")
+        logging.info("Workspace created")
 
     def get_path(self, *args) -> str:
         return str(Path(self.path).joinpath(*args))

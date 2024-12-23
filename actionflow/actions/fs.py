@@ -1,3 +1,4 @@
+import logging
 import os
 
 from actionflow.action import Action
@@ -48,4 +49,9 @@ class FixRights(Action):
     path: str
 
     def _run(self):
-        return run_command(["chmod", "-R", self.mode, self.path])
+        try:
+            return run_command(["sudo", "chown", "-R", self.mode, self.path])
+
+        except Exception as e:
+            logging.error(f"Failed to fix rights: {e}")
+            return False

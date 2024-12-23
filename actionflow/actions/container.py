@@ -1,12 +1,13 @@
+import logging
+
 from actionflow.action import Action
-from actionflow.logger import _logger
 
 try:
     import docker as docker
 
     client = docker.from_env()
 except ImportError:
-    _logger.error("Docker SDK not found")
+    logging.error("Docker SDK not found")
     docker = None
     client = None
 
@@ -18,13 +19,13 @@ class ContainerAction(Action):
 
     name: str = "container-action"
     description: str = "Container action"
-    wait: bool = True
     container: str
     commands: list[str]
     user: str = "odoo"
     tty: bool = False
     stream: bool = False
     workdir: str = "/var/lib/odoo/.local/upgrade"
+    _buffer: str = ""
 
     @property
     def services(self):
@@ -39,6 +40,7 @@ class ContainerAction(Action):
 
     def _parse(self, chunk):
         print(chunk, end="")
+        self._buffer += chunk
 
     def _run(self):
         container = client.containers.get(self.container)
@@ -54,16 +56,18 @@ class ContainerAction(Action):
                         workdir=self.workdir,
                     )
 
-                    print(
+                    logging.debug(
                         f"Running command '{command}' in container '{container.name}'"
                     )
-                    print("Command output:")
-                    print(exec_result.output.decode("utf-8"))
+
+                    logging.info(
+                        "Command output:\n%s", exec_result.output.decode("utf-8")
+                    )
 
                     assert exec_result.exit_code == 0, "Command failed"
 
                 except Exception as e:
-                    print(f"Error while running command: {e}")
+                    logging.error(f"Error while running command: {e}")
                     return False
         else:
             for command in self.commands:
@@ -101,9 +105,10 @@ class ContainerAction(Action):
                     #             addons += 1
 
                     # print(f"Total addons: {addons}")
+                    logging.info(self._buffer)
 
                 except Exception as e:
-                    print(f"Error while running command: {e}")
+                    logging.error(f"Error while running command: {e}")
                     return False
 
         return True

@@ -1,3 +1,4 @@
+import logging
 import threading
 from abc import abstractmethod
 from datetime import datetime
@@ -5,6 +6,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 from transitions import Machine
+
+logging.getLogger("transitions").setLevel(logging.WARNING)
 
 
 class SharedResources:

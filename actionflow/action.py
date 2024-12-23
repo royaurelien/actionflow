@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 
 from pydantic import BaseModel
@@ -5,7 +6,6 @@ from pydantic import BaseModel
 from actionflow.common import SharedResources, StateModel
 from actionflow.context import Context
 from actionflow.exceptions import ActionNotFound
-from actionflow.logger import _logger
 
 
 class BaseAction(ABC):
@@ -68,28 +68,28 @@ class Action(BaseAction, StateModel):
             while self.retry > 0:
                 # Check if the action should be skipped
                 if self.skip and self._check():
-                    _logger.info(f"[Action: {self.name}] already satisfied, skipping.")
+                    logging.info(f"[Action: {self.name}] already satisfied, skipping.")
                     return True
 
-                _logger.info(f"[Action: {self.name}] executing.")
+                logging.info(f"[Action: {self.name}] executing.")
                 self._pre_process()
 
                 if self._run():  # If the action succeeds, stop retrying
-                    _logger.info(f"[Action: {self.name}] completed successfully.")
+                    logging.info(f"[Action: {self.name}] completed successfully.")
                     self._post_process()
                     return self._check()
                 if self.continue_on_error:
-                    _logger.warning(
+                    logging.warning(
                         f"[Action: {self.name}] Error occurred, continuing despite failure."
                     )
                     self._post_process()
                     return True
                 self.retry -= 1
-                _logger.warning(
+                logging.warning(
                     f"[Action: {self.name}] Retrying, attempts left: {self.retry}"
                 )
         except Exception as error:
-            _logger.error(f"[Action: {self.name}] Error: {error}")
+            logging.error(f"[Action: {self.name}] Error: {error}")
             raise
 
         return False
@@ -100,7 +100,7 @@ class Action(BaseAction, StateModel):
         try:
             self.machine.complete() if self.run() else self.machine.fail()
         except Exception as error:
-            _logger.error(f"Error executing action {self.name}: {error}")
+            logging.error(f"Error executing action {self.name}: {error}")
             self.machine.fail()
 
     def summary(self):

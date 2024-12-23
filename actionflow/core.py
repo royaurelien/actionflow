@@ -1,4 +1,5 @@
 import importlib
+import logging
 import pkgutil
 from datetime import datetime
 from pathlib import Path
@@ -10,7 +11,6 @@ from actionflow.action import Action
 from actionflow.common import StateModel
 from actionflow.context import Context, Workspace
 from actionflow.jobs import Job
-from actionflow.logger import _logger
 from actionflow.tools import parse_yaml
 
 
@@ -108,19 +108,19 @@ class Flow(StateModel):
 
         # self.init_workspace()
 
-        _logger.info("*" * 50)
+        logging.info("*" * 50)
         try:
-            _logger.info(f"[Flow] Starting execution... ({self.jobs_count} jobs)")
+            logging.info(f"[Flow] Starting execution... ({self.jobs_count} jobs)")
             self.machine.start()
 
             for index, job in self.next_job():
                 job.execute()
                 if job.machine.state != "success":
-                    _logger.error(f"Job {index}/{self.jobs_count} {job.name} failed.")
+                    logging.error(f"Job {index}/{self.jobs_count} {job.name} failed.")
                     return
 
         except Exception as error:
-            _logger.error(f"[Flow] Failed with error: {error}")
+            logging.error(f"[Flow] Failed with error: {error}")
             self.machine.fail()
             return
 
@@ -227,7 +227,7 @@ class Flow(StateModel):
         if not names or "actionflow.actions" not in names:
             names.insert(0, "actionflow.actions")
 
-        _logger.debug(f"Loading actions from: {', '.join(names)}")
+        logging.debug(f"Loading actions from: {', '.join(names)}")
 
         for package_name in names:
             package = importlib.import_module(package_name)
@@ -235,7 +235,7 @@ class Flow(StateModel):
                 if not is_pkg:
                     importlib.import_module(f"{package_name}.{module_name}")
 
-        _logger.info(
+        logging.info(
             f"Loaded actions ({len(Action.list())}): {', '.join(Action.list())}"
         )
 

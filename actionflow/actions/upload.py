@@ -1,5 +1,5 @@
+import logging
 import os
-from abc import abstractmethod
 
 try:
     import paramiko as paramiko
@@ -7,7 +7,6 @@ except ImportError:
     paramiko = None
 
 from actionflow.action import Action
-from actionflow.logger import _logger
 from actionflow.net import upload_to_s3
 
 
@@ -15,15 +14,8 @@ class UploadFile(Action):
     name: str = None
     description: str = "Upload file to a destination"
 
-    @property
-    @abstractmethod
-    def source(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def destination(self) -> str:
-        pass
+    source: str
+    destination: str
 
     def _pre_process(self):
         if not os.path.exists(self.source):
@@ -46,7 +38,7 @@ class UploadS3(UploadFile):
     secret_key: str
 
     def _run(self):
-        _logger.info(f"Uploading {self.destination} to S3 bucket: {self.bucket}")
+        logging.info(f"Uploading {self.destination} to S3 bucket: {self.bucket}")
         upload_to_s3(
             bucket_name=self.bucket,
             source_file=self.source,
@@ -89,7 +81,7 @@ class UploadSftp(UploadFile):
     password: str
 
     def _run(self):
-        _logger.info(f"Uploading backup to SFTP server: {self.host}")
+        logging.info(f"Uploading backup to SFTP server: {self.host}")
         transport = paramiko.Transport((self.host, self.port))
         transport.connect(username=self.username, password=self.password)
         sftp = paramiko.SFTPClient.from_transport(transport)

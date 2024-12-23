@@ -1,10 +1,10 @@
+import logging
+
 try:
     import boto3 as boto3
 except ImportError:
     boto3 = None
 import requests
-
-from actionflow.logger import _logger
 
 DEFAULT_TIMEOUT = 60
 
@@ -21,9 +21,9 @@ def download_file(
         with open(output_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=chunk_size):
                 f.write(chunk)
-        _logger.info(f"File downloaded to {output_path}")
+        logging.info(f"File downloaded to {output_path}")
     else:
-        _logger.info(
+        logging.info(
             f"Failed to download File: {response.status_code}, {response.text}"
         )
 
@@ -59,6 +59,6 @@ def upload_to_s3(
         Bucket=bucket_name,
         Key=destination_blob,
     )
-    _logger.info(
+    logging.info(
         f"File '{source_file}' uploaded to '{bucket_name}/{destination_blob}'."
     )

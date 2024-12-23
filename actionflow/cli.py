@@ -4,6 +4,7 @@ import os
 import sys
 
 from actionflow.core import Flow
+from actionflow.logger import configure_logger
 from actionflow.tools import create_pidfile, remove_pidfile, tail_logs
 
 
@@ -113,4 +114,5 @@ def main():
 
 
 if __name__ == "__main__":
+    configure_logger()
     main()
