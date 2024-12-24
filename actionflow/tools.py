@@ -1,13 +1,15 @@
 import configparser
 import logging
 import os
+import random
 import re
+import string
 import subprocess
 import sys
 from datetime import datetime
 from functools import wraps
 from string import Template
-from typing import Any, List
+from typing import Any, BinaryIO, Generator, List, Tuple
 
 import yaml
 from pydantic import BaseModel
@@ -45,6 +47,12 @@ class SingletonMeta(type):
             instance = super().__call__(*args, **kwargs)
             cls._instances[cls] = instance
         return cls._instances[cls]
+
+
+def random_string(length):
+    return "".join(
+        random.choice(string.ascii_lowercase + string.digits) for _ in range(length)
+    )
 
 
 # def effective_access(*args, **kwargs):
@@ -169,7 +177,7 @@ def sync_directories(source: str, target: str) -> bool:
     if not target.endswith("/"):
         target += "/"
 
-    command = ["rsync", "-av", source, target]
+    command = ["rsync", "-av", "--no-times", source, target]
     result = subprocess.run(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
     )
@@ -314,3 +322,19 @@ def convert_schema_to_ini(
     with open(filepath, "w") as configfile:
         config.write(configfile)
     logging.info(f"Configuration saved to {filepath}")
+
+
+def chunk_generator(
+    file: BinaryIO, filesize: int, chunksize: int = 5 * 1024 * 1024
+) -> Generator[Tuple[int, bytes], None, None]:
+    """Generator to read chunks from the file."""
+    position = 0
+    while position < filesize:
+        file.seek(position)
+        chunk_data = file.read(chunksize)
+        if not chunk_data:
+            break
+
+        logging.debug(f"Read chunk at position {position}, size: {len(chunk_data)}")
+        yield position, chunk_data
+        position += len(chunk_data)
