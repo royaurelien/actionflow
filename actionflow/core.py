@@ -70,10 +70,6 @@ class Flow(StateModel):
     def jobs_count(self):
         return len(self.jobs)
 
-    @property
-    def exec_time(self) -> float:
-        return self._end - self._start
-
     @staticmethod
     def get_available_actions() -> List[str]:
         return sorted(Action.list())
@@ -105,6 +101,9 @@ class Flow(StateModel):
         """
 
         self._start = datetime.now()
+        logging.info(
+            f"[Flow] Executing flow: {self.name}, {self._start:%Y-%m-%d %H:%M:%S}"
+        )
 
         # self.init_workspace()
 
@@ -125,6 +124,7 @@ class Flow(StateModel):
             return
 
         self._end = datetime.now()
+        logging.info(f"[Flow] Execution completed: {self._end:%Y-%m-%d %H:%M:%S}")
         self.machine.complete()
 
     def summary(self) -> Generator[str, None, None]:
@@ -133,9 +133,9 @@ class Flow(StateModel):
             for group_index, group in job.next_group():
                 # yield f"Group {group_index}"
                 for action_index, action in group.next_action():
-                    yield f"Action {action_index}: {action.name} -> {action.exec_time:.5f} ({action.machine.state})"
+                    yield f"Action {action_index}: {action.name} -> {action._exec_time:.5f} ({action.machine.state})"
 
-        yield f"Total execution time: {self.exec_time}"
+        yield f"Total execution time: {self._exec_time}"
 
     @staticmethod
     def load(raw: str, obj: "Context") -> dict:

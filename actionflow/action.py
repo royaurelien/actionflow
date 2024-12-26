@@ -7,6 +7,8 @@ from actionflow.common import SharedResources, StateModel
 from actionflow.context import Context
 from actionflow.exceptions import ActionNotFound
 
+# from actionflow.logger import log_execution
+
 
 class BaseAction(ABC):
     name: str
@@ -50,8 +52,7 @@ class BaseAction(ABC):
 
 
 class Action(BaseAction, StateModel):
-    # _id: str
-    exec_time: float = 0.0
+    _short: bool = True
     name: str = None
     description: str
     concurrency: bool = False
@@ -108,5 +109,5 @@ class Action(BaseAction, StateModel):
         return {
             "name": self.name,
             "state": self.machine.state,
-            "exec": self.exec_time,
+            "exec": self._exec_time,
         }

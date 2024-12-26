@@ -1,8 +1,9 @@
 import logging
 import threading
+import time
 from abc import abstractmethod
-from datetime import datetime
-from typing import Any, Optional
+from datetime import datetime, timedelta
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 from transitions import Machine
@@ -46,6 +47,31 @@ class SharedResources:
             self.resources[resource_name] = value
 
 
+class ExecutionModel(object):
+    _create_ts: datetime = datetime.now()
+    _start_ts: Optional[datetime] = None
+    _end_ts: Optional[datetime] = None
+    _start: Optional[float] = None
+    _end: Optional[float] = None
+    _short: bool = False
+
+    def start_counter(self) -> None:
+        if not self._short:
+            self._start_ts = datetime.now()
+        else:
+            self._start = time.perf_counter()
+
+    def stop_counter(self) -> None:
+        if not self._short:
+            self._end_ts = datetime.now()
+        else:
+            self._end = time.perf_counter()
+
+    @property
+    def _exec_time(self) -> Union[timedelta, float]:
+        return self._end - self._start if self._short else self._end_ts - self._start_ts
+
+
 class StateModel(BaseModel):
     """
     StateModel is a class that represents the state of a machine with transitions between different states.
@@ -62,11 +88,33 @@ class StateModel(BaseModel):
         execute(): Abstract method to be implemented by subclasses to define specific execution logic.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
     state: str = Field(default="pending", exclude=True)
     machine: Machine = Field(default=None, exclude=True)
-    create_ts: datetime = datetime.now()
-    update_ts: Optional[datetime] = None
+    _create_ts: datetime = datetime.now()
+    _start_ts: Optional[datetime] = None
+    _end_ts: Optional[datetime] = None
+    _start: Optional[float] = None
+    _end: Optional[float] = None
+    _short: bool = False
+
+    def on_enter_running(self) -> None:
+        if not self._short:
+            self._start_ts = datetime.now()
+        else:
+            self._start = time.perf_counter()
+
+    def on_exit_running(self) -> None:
+        if not self._short:
+            self._end_ts = datetime.now()
+        else:
+            self._end = time.perf_counter()
+
+    @property
+    def _exec_time(self) -> Union[timedelta, float]:
+        return self._end - self._start if self._short else self._end_ts - self._start_ts
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -77,6 +125,8 @@ class StateModel(BaseModel):
         self.machine.add_transition("start", "pending", "running")
         self.machine.add_transition("complete", "running", "success")
         self.machine.add_transition("fail", "running", "failure")
+        # self.machine.on_enter_running("start_counter")
+        # self.machine.on_exit_running("stop_counter")
 
     @abstractmethod
     def execute(self):
