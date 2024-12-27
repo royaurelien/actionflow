@@ -15,60 +15,16 @@ from actionflow.tools import parse_yaml
 
 
 class Flow(StateModel):
-    """
-    Flow class represents a sequence of jobs to be executed in a defined order.
-
-    Attributes:
-        name (str): The name of the flow.
-        jobs (List[Job]): A list of jobs to be executed in the flow.
-        env (dict): A dictionary containing environment variables for the flow.
-        context (dict): A dictionary containing context information for the flow.
-        workspace (str): The workspace directory for the flow.
-        _start (datetime): The start time of the flow execution.
-        _end (datetime): The end time of the flow execution.
-
-    Properties:
-        jobs_count (int): Returns the number of jobs in the flow.
-
-    Methods:
-        next_job() -> Generator[Tuple[int, Job], None, None]:
-            Yields the index and job for each job in the flow.
-
-        execute():
-            Raises an exception if any job fails during execution.
-
-        summary():
-            Prints a summary of the actions in each job of the flow.
-
-        load(raw: str) -> dict:
-            Loads flow data from a YAML string and returns a dictionary containing the parsed flow data.
-
-        from_file(filepath: str) -> "Flow":
-            Creates a Flow instance from a file containing the flow data.
-
-        from_string(raw: str) -> "Flow":
-            Creates a Flow instance from a raw string containing the flow data.
-
-        load_all_actions():
-            Loads all action modules from the 'actionflow.actions' package.
-
-    """
-
     name: str
     jobs: List[Job]
     env: dict = {}
     context: Context
 
-    _start: datetime = None
-    _end: datetime = None
+    _child: str = "jobs"
 
     @property
     def workspace(self) -> str:
         return self.context.workspace.path
-
-    @property
-    def jobs_count(self):
-        return len(self.jobs)
 
     @staticmethod
     def get_available_actions() -> List[str]:
@@ -81,7 +37,7 @@ class Flow(StateModel):
         for index, job in enumerate(self.jobs, start=1):
             yield index, job
 
-    def execute(self):
+    def execute(self) -> None:
         """
         Executes the flow by starting the machine, executing each job, and handling success or failure.
 
@@ -109,13 +65,13 @@ class Flow(StateModel):
 
         logging.info("*" * 50)
         try:
-            logging.info(f"[Flow] Starting execution... ({self.jobs_count} jobs)")
+            logging.info(f"[Flow] Starting execution... ({self.count} jobs)")
             self.machine.start()
 
             for index, job in self.next_job():
-                job.execute()
+                job.execute(index, total=self.count)
                 if job.machine.state != "success":
-                    logging.error(f"Job {index}/{self.jobs_count} {job.name} failed.")
+                    logging.error(f"Job {index}/{self.count} {job.name} failed.")
                     return
 
         except Exception as error:

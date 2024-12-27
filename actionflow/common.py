@@ -5,7 +5,7 @@ from abc import abstractmethod
 from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 from transitions import Machine
 
 logging.getLogger("transitions").setLevel(logging.WARNING)
@@ -54,6 +54,7 @@ class ExecutionModel(object):
     _start: Optional[float] = None
     _end: Optional[float] = None
     _short: bool = False
+    _child: str = None
 
     def start_counter(self) -> None:
         if not self._short:
@@ -96,11 +97,17 @@ class StateModel(BaseModel):
     _create_ts: datetime = datetime.now()
     _start_ts: Optional[datetime] = None
     _end_ts: Optional[datetime] = None
-    _start: Optional[float] = None
-    _end: Optional[float] = None
+    _start: Optional[float] = 0.0
+    _end: Optional[float] = 0.0
     _short: bool = False
 
+    @property
+    def _name(self) -> str:
+        name = getattr(self, "name", None)
+        return f"{self.__class__.__name__}: {name}" if name else self.__class__.__name__
+
     def on_enter_running(self) -> None:
+        logging.info(f"[{self._name}] Started execution")
         if not self._short:
             self._start_ts = datetime.now()
         else:
@@ -112,9 +119,18 @@ class StateModel(BaseModel):
         else:
             self._end = time.perf_counter()
 
+    def on_enter_success(self) -> None:
+        logging.info(f"[{self._name}] Completed execution in {self._exec_time}")
+
     @property
     def _exec_time(self) -> Union[timedelta, float]:
-        return self._end - self._start if self._short else self._end_ts - self._start_ts
+        return (
+            (self._end - self._start) or timedelta(seconds=0)
+            if self._short
+            else (self._end_ts - self._start_ts)
+            if self._end_ts and self._start_ts
+            else 0.0
+        )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -125,9 +141,14 @@ class StateModel(BaseModel):
         self.machine.add_transition("start", "pending", "running")
         self.machine.add_transition("complete", "running", "success")
         self.machine.add_transition("fail", "running", "failure")
-        # self.machine.on_enter_running("start_counter")
-        # self.machine.on_exit_running("stop_counter")
+        self.machine.on_enter_running(lambda: self.on_enter_running())
+        self.machine.on_exit_running(lambda: self.on_exit_running())
+        self.machine.on_enter_success(lambda: self.on_enter_success())
 
     @abstractmethod
-    def execute(self):
+    def execute(self, index: int, total: int) -> None:
         """Method to be implemented by subclasses"""
+
+    @computed_field
+    def count(self) -> int:
+        return len(getattr(self, "_child", 0))

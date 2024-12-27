@@ -30,6 +30,7 @@ class Group(StateModel):
 
     actions: List[Action]
     _stop_event: threading.Event = None
+    _child: str = "actions"
 
     def model_post_init(self, __context):
         self._stop_event = threading.Event()
@@ -39,16 +40,18 @@ class Group(StateModel):
         for index, action in enumerate(self.actions, start=1):
             yield index, action
 
-    def execute(self):
+    def execute(self, index: int, total: int) -> None:
         if self._stop_event.is_set():
             return
 
         try:
-            # logging.info("[Group] Executing actions in parallel...")
             self.machine.start()
 
             with ThreadPoolExecutor() as executor:
-                futures = [executor.submit(action.execute) for action in self.actions]
+                futures = [
+                    executor.submit(action.execute, action_index, self.count)
+                    for action_index, action in enumerate(self.actions)
+                ]
                 for future in futures:
                     # Wait for all actions to complete
                     future.result()
@@ -63,40 +66,13 @@ class Group(StateModel):
             logging.info(f"[Group] Failed with error: {e}")
             return
 
-        # logging.info("[Group] All actions completed successfully.")
         self.machine.complete()
 
 
 class Job(StateModel):
-    """
-    Represents a job consisting of a series of actions to be executed.
-
-    Attributes:
-        name (str): The name of the job.
-        steps (List[Action]): A list of actions to be executed as part of the job.
-
-    Methods:
-        preprocess_data(cls, values):
-            Replaces steps with action instances created from the registry.
-
-        length() -> int:
-            Returns the number of steps in the job.
-
-        grouped() -> List[List[Action]]:
-            Groups the steps by the "concurrency" attribute.
-
-        set_indexes(index: int) -> None:
-            Sets unique indexes for each action in the job.
-
-        next_group() -> Generator[Tuple[int, Group], None, None]:
-            Yields the next group of actions to be executed.
-
-        execute():
-            Executes the job by running all actions in sequence, handling state transitions and logging.
-    """
-
     name: str
     steps: List[Action]
+    _child: str = "steps"
 
     @model_validator(mode="before")
     def preprocess_data(cls, values):
@@ -119,10 +95,6 @@ class Job(StateModel):
         return values
 
     @property
-    def length(self) -> int:
-        return len(self.steps)
-
-    @property
     def grouped(self) -> List[List[Action]]:
         return group_by(self.steps, "concurrency")
 
@@ -138,27 +110,27 @@ class Job(StateModel):
             group = Group(actions=actions)
             yield index, group
 
-    def execute(self):
+    def execute(self, index: int, total: int) -> None:
         try:
             self.machine.start()
-            logging.info(f"[Job: {self.name}] Starting execution...")
+            # logging.info(f"[Job: {self.name}] Starting execution...")
 
-            total = len(self.grouped)
-            for index, group in self.next_group():
-                logging.info(
-                    f"[Group {index}/{total}] Executing actions in parallel..."
-                )
+            # total = len(self.grouped)
+            for group_index, group in self.next_group():
+                # logging.info(
+                #     f"[Group {index}/{total}] Executing actions in parallel..."
+                # )
 
-                group.execute()
+                group.execute(group_index, self.count)
                 if group.machine.state != "success":
                     self.machine.fail()
                     return
 
-                logging.info(
-                    f"[Group {index}/{total}] All actions completed successfully."
-                )
+                # logging.info(
+                # f"[Group {index}/{total}] All actions completed successfully."
+                # )
 
-            logging.info(f"[Job: {self.name}] Completed successfully.")
+            # logging.info(f"[Job: {self.name}] Completed successfully.")
 
         except Exception as e:
             logging.info(f"[Job: {self.name}] Failed with error: {e}")

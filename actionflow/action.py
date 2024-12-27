@@ -7,8 +7,6 @@ from actionflow.common import SharedResources, StateModel
 from actionflow.context import Context
 from actionflow.exceptions import ActionNotFound
 
-# from actionflow.logger import log_execution
-
 
 class BaseAction(ABC):
     name: str
@@ -62,7 +60,6 @@ class Action(BaseAction, StateModel):
 
     shared_resources: SharedResources = SharedResources()
 
-    # @log_execution("exec_time")
     def run(self) -> bool:
         """Run the action with retry logic"""
         try:
@@ -72,11 +69,11 @@ class Action(BaseAction, StateModel):
                     logging.info(f"[Action: {self.name}] already satisfied, skipping.")
                     return True
 
-                logging.info(f"[Action: {self.name}] executing.")
+                # logging.info(f"[Action: {self.name}] executing.")
                 self._pre_process()
 
                 if self._run():  # If the action succeeds, stop retrying
-                    logging.info(f"[Action: {self.name}] completed successfully.")
+                    # logging.info(f"[Action: {self.name}] completed successfully.")
                     self._post_process()
                     return self._check()
                 if self.continue_on_error:
@@ -95,7 +92,7 @@ class Action(BaseAction, StateModel):
 
         return False
 
-    def execute(self):
+    def execute(self, index: int, total: int) -> None:
         """Unified execution pipeline."""
         self.machine.start()
         try:
