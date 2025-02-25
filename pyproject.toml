@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "actionflow"
+version = "0.3.2"
+description = "ActionFlow is a lightweight workflow automation framework inspired by GitHub Actions, enabling the execution of YAML-defined jobs and actions with support for parallelism, state management, and a CLI or web server interface."
+authors = ["Aurelien Roy <roy.aurelien@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pydantic = "^2.10.3"
+pydantic-settings = "^2.7.0"
+pyyaml = "^6.0.2"
+transitions = "^0.9.2"
+docker = "^7.1.0"
+watchdog = "^6.0.0"
+
+
+[tool.poetry.group.dev.dependencies]
+mkdocs = "^1.6.1"
+mkdocs-material = "^9.5.49"
+mkdocstrings = {extras = ["python"], version = "^0.27.0"}
+mkdocs-mermaid2-plugin = "^1.2.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+actionflow = "actionflow.cli:main"

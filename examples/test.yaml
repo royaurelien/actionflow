@@ -1,0 +1,35 @@
+name: example
+context:
+  workspace: /tmp
+  mode: test
+  test: false
+env:
+  key1: value1
+  key2: value2
+jobs:
+  job0:
+    steps:
+      - name: checkout
+        with:
+          repository: git@github.com:OCA/web.git
+          branch: "17.0"
+          path: /tmp/web
+  job1:
+    steps:
+      - name: example
+        with:
+          concurrency: false
+      - name: fail
+        with:
+          concurrency: false
+      - name: example
+        with:
+          concurrency: true
+  job2:
+    steps:
+      - name: example
+        with:
+          concurrency: true
+      - name: example
+        with:
+          concurrency: true
