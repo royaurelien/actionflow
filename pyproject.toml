@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "actionflow"
-version = "0.3.2"
+version = "0.3.3"
 description = "ActionFlow is a lightweight workflow automation framework inspired by GitHub Actions, enabling the execution of YAML-defined jobs and actions with support for parallelism, state management, and a CLI or web server interface."
 authors = ["Aurelien Roy <roy.aurelien@gmail.com>"]
 readme = "README.md"
