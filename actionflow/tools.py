@@ -8,6 +8,7 @@ import subprocess
 import sys
 from datetime import datetime
 from functools import wraps
+from io import StringIO
 from string import Template
 from typing import Any, BinaryIO, Generator, List, Tuple
 
@@ -303,7 +304,7 @@ def get_local_repository(path: str, remote_name: str = "origin") -> tuple:
 
 def convert_schema_to_ini(
     schema: BaseModel, filepath: str, section_name: str = "options"
-) -> None:
+) -> str:
     config = configparser.ConfigParser()
 
     def convert_value(value):
@@ -322,6 +323,11 @@ def convert_schema_to_ini(
     with open(filepath, "w") as configfile:
         config.write(configfile)
     logging.info(f"Configuration saved to {filepath}")
+
+    output = StringIO()
+    config.write(output)
+
+    return output.getvalue()
 
 
 def chunk_generator(
